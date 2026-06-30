@@ -30,25 +30,35 @@ export function GeneralSettingsSection() {
   };
 
   return (
-    <section className={styles.section}>
-      <h1 className={styles.sectionTitle}>{t("generalSettings.title")}</h1>
-      <div className={styles.settingGroup}>
-        <div className={styles.settingRow}>
-          <label className={styles.settingLabel} htmlFor="language">
-            {t("generalSettings.language.label")}
-          </label>
-          <select
-            id="language"
-            className={styles.select}
-            value={locale}
-            onChange={(event) => void handleLanguageChange(event.target.value as Locale)}
-          >
-            {SUPPORTED_LOCALES.map((value) => (
-              <option key={value} value={value}>
-                {t(LOCALE_OPTION_KEYS[value])}
-              </option>
-            ))}
-          </select>
+    <section className={styles.pane}>
+      <h2 className={styles.paneTitle}>{t("generalSettings.title")}</h2>
+      <p className={styles.paneSub}>{t("generalSettings.sub")}</p>
+      <div className={styles.group}>
+        <div className={styles.groupTitle}>{t("generalSettings.group.appearance")}</div>
+        <div className={styles.formcard}>
+          <div className={styles.frow}>
+            <div className={styles.left}>
+              <div className="t">
+                <label htmlFor="language">{t("generalSettings.language.label")}</label>
+              </div>
+              <div className="d">{t("generalSettings.language.help")}</div>
+            </div>
+            <div className={styles.ctl}>
+              <div className="select">
+                <select
+                  id="language"
+                  value={locale}
+                  onChange={(event) => void handleLanguageChange(event.target.value as Locale)}
+                >
+                  {SUPPORTED_LOCALES.map((value) => (
+                    <option key={value} value={value}>
+                      {t(LOCALE_OPTION_KEYS[value])}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

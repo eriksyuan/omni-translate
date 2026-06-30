@@ -12,13 +12,25 @@
   "preferences": {
     "title": "偏好设置",
     "nav": {
-      "general": "通用设置"
+      "general": "通用",
+      "ocr": "OCR 服务",
+      "asr": "音频 ASR",
+      "mt": "翻译服务"
+    },
+    "action": {
+      "reset": "恢复默认",
+      "save": "保存"
     }
   },
   "generalSettings": {
     "title": "通用设置",
+    "sub": "应用级别的外观与语言偏好。",
+    "group": {
+      "appearance": "外观与语言"
+    },
     "language": {
       "label": "语言",
+      "help": "切换界面显示语言，立即生效。",
       "option": {
         "zh-CN": "简体中文",
         "en": "English"
@@ -26,20 +38,150 @@
     }
   },
   "audioConfig": {
-    "title": "音频实时翻译配置",
-    "description": "动态依赖检测、音频输入源与 ASR / 翻译引擎选择（UI 骨架）。",
-    "placeholder": "Phase 2：接入 BlackHole 检测与状态 A/B 双态。"
+    "panelTitle": "开启系统音频同传",
+    "banner": {
+      "title": "检测到当前环境未就绪，请先解锁："
+    },
+    "dep": {
+      "mic": "麦克风权限",
+      "grant": "点击授权",
+      "granted": "已授权",
+      "blackhole": "虚拟声卡 BlackHole",
+      "install": "一键安装",
+      "installed": "已安装"
+    },
+    "ready": {
+      "mic": "麦克风已授权",
+      "blackhole": "BlackHole 已安装"
+    },
+    "field": {
+      "source": "音频输入源",
+      "locked": "权限不足，请先解锁上方依赖",
+      "asr": "ASR 引擎",
+      "mt": "翻译引擎"
+    },
+    "source": {
+      "blackhole": "BlackHole 2ch（系统声音内录）",
+      "mic": "MacBook Pro 麦克风"
+    },
+    "asr": {
+      "whisperBase": "本地 Whisper · Base",
+      "whisperLarge": "本地 Whisper · Large",
+      "aliyun": "阿里云 ASR"
+    },
+    "mt": {
+      "deepseek": "云端 DeepSeek-V3",
+      "localLlm": "本地 LLM · Qwen2.5",
+      "deepl": "DeepL"
+    },
+    "start": {
+      "idle": "开启音频字幕",
+      "listening": "正在监听系统音频…"
+    },
+    "okNote": "环境已就绪 — 面板已切换至就绪状态"
   },
   "ocrPermission": {
-    "title": "需要屏幕录制权限",
-    "description": "Just-in-Time 权限说明与系统设置引导（UI 骨架）。",
-    "placeholder": "Phase 2：授权检测与跳转系统设置。"
+    "heading": "需要屏幕录制权限",
+    "lead": "「实时字幕」需要屏幕录制权限来捕捉您指定的屏幕区域以进行 OCR 识别。",
+    "privacy": "我们绝不会上传您的任何屏幕数据",
+    "guide": {
+      "caption": "图示：系统设置 → 隐私与安全性 → 屏幕录制",
+      "general": "通用",
+      "privacy": "隐私与安全性",
+      "sound": "声音",
+      "screenRecording": "屏幕录制",
+      "toggle": "授权开关（演示）"
+    },
+    "cancel": "临时取消",
+    "grant": "去系统设置授权",
+    "grantedNote": "已授权 — 即将进入选区模式。"
   },
   "ocrOverlay": {
-    "hint": "按住拖拽，框选一个区域（UI 骨架）"
+    "hint": "按住拖拽，框选一个区域",
+    "start": "开始识别",
+    "recognizing": "识别中…"
   },
   "subtitle": {
     "original": "Welcome to the future of AI translation.",
-    "translation": "欢迎来到 <hl>AI 翻译</hl>的未来。"
+    "tokens": "欢迎来到|*AI 翻译|的未来。",
+    "lock": "锁定 / 鼠标穿透",
+    "opacity": "背景透明度",
+    "close": "关闭",
+    "clickthrough": "点击穿透至背后应用"
+  },
+  "ocrSettings": {
+    "title": "OCR 服务设置",
+    "sub": "用于屏幕区域文字识别。本地引擎免费且不外传数据；云厂商识别率更高，需配置密钥。",
+    "group": {
+      "engine": "识别引擎"
+    },
+    "engine": {
+      "label": "OCR 引擎",
+      "help": "选中云厂商时需填写密钥",
+      "localNative": "本地系统原生 OCR（免费 / 推荐）",
+      "localPaddle": "PaddleOCR（本地）",
+      "cloudBaidu": "百度 OCR",
+      "cloudTencent": "腾讯 OCR"
+    },
+    "appId": "AppID",
+    "appIdPlaceholder": "例如 28xxxxxx",
+    "secret": "Secret Key",
+    "test": {
+      "label": "连接测试",
+      "help": "校验密钥是否可用",
+      "run": "测试连接",
+      "testing": "测试中…",
+      "ok": "连接成功"
+    }
+  },
+  "asrSettings": {
+    "title": "音频 ASR 设置",
+    "sub": "语音转文字引擎。本地 Whisper 完全离线，模型越大越准、越慢；云厂商低延迟，需联网。",
+    "group": {
+      "engine": "识别引擎"
+    },
+    "engine": {
+      "label": "ASR 引擎",
+      "help": "读取于音频配置面板的可用列表",
+      "whisper": "本地 Whisper",
+      "cloudAliyun": "阿里云 ASR",
+      "cloudTencent": "腾讯云 ASR"
+    },
+    "model": {
+      "label": "模型规格",
+      "help": "Tiny 最快 · Large 最准",
+      "tiny": "Tiny",
+      "base": "Base",
+      "large": "Large"
+    },
+    "manage": {
+      "label": "模型管理",
+      "file": "whisper-base.bin · 142 MB",
+      "progress": "64% · 下载中",
+      "choose": "自定义选择模型文件…"
+    },
+    "apiKey": "API Key"
+  },
+  "mtSettings": {
+    "title": "翻译服务设置",
+    "sub": "传统机器翻译延迟低、适合短句；大模型翻译更懂语境，支持 OpenAI 兼容协议自定义代理。",
+    "group": {
+      "mt": "传统机器翻译（MT）",
+      "llm": "大模型翻译（LLM · OpenAI 兼容）"
+    },
+    "mt": {
+      "provider": "服务商",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "DeepL / Google API Key"
+    },
+    "llm": {
+      "baseUrl": "Base URL",
+      "baseUrlHint": "允许自定义代理地址",
+      "apiKey": "API Key",
+      "model": "Model Name",
+      "prompt": "提示词 Prompt",
+      "promptHint": "预设可编辑，{{text}} 处会替换为识别到的原文",
+      "promptDefault": "你是一个专业的同声传译专家。请将输入的原文精准、自然地翻译为简体中文，只输出译文，不要解释。"
+    }
   }
 }
