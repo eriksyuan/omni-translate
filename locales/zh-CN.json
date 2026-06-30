@@ -55,9 +55,13 @@
       "mic": "麦克风权限",
       "grant": "点击授权",
       "granted": "已授权",
+      "micDenied": "麦克风权限被拒绝，请在「系统设置 → 隐私与安全性 → 麦克风」中允许 OmniTranslate。",
       "blackhole": "虚拟声卡 BlackHole",
-      "install": "一键安装",
-      "installed": "已安装"
+      "install": "查看安装指南",
+      "installed": "已安装",
+      "installGuideHint": "按文档完成安装后返回应用，将自动检测是否已安装。",
+      "recheck": "重新检测",
+      "blackholeGuideLink": "打开安装文档"
     },
     "ready": {
       "mic": "麦克风已授权",
@@ -67,7 +71,12 @@
       "source": "音频输入源",
       "locked": "权限不足，请先解锁上方依赖",
       "asr": "ASR 引擎",
-      "mt": "翻译引擎"
+      "mt": "翻译引擎",
+      "noVerifiedAsr": "请先在偏好设置中配置并测试 ASR",
+      "noVerifiedMt": "请先在偏好设置中配置并测试翻译引擎"
+    },
+    "action": {
+      "goConfigure": "去配置…"
     },
     "source": {
       "blackhole": "BlackHole 2ch（系统声音内录）",
@@ -85,7 +94,13 @@
     },
     "start": {
       "idle": "开启音频字幕",
-      "listening": "正在监听系统音频…"
+      "listening": "正在监听系统音频…",
+      "listeningMic": "正在监听麦克风…",
+      "stop": "停止监听"
+    },
+    "error": {
+      "captureFailed": "无法启动音频捕捉，请检查输入源与系统权限。",
+      "noAsrOrMt": "请先在偏好设置中完成 ASR 与翻译引擎的测试连接。"
     },
     "okNote": "环境已就绪 — 面板已切换至就绪状态"
   },
@@ -166,10 +181,20 @@
     "manage": {
       "label": "模型管理",
       "file": "whisper-base.bin · 142 MB",
-      "progress": "64% · 下载中",
+      "progress": "未选择模型",
+      "ready": "已选择",
+      "pathPlaceholder": "模型文件路径或占位标识",
       "choose": "自定义选择模型文件…"
     },
-    "apiKey": "API Key"
+    "apiKey": "API Key",
+    "test": {
+      "label": "连接测试",
+      "help": "测试通过后才会出现在音频监听页的引擎列表中",
+      "run": "测试连接",
+      "testing": "测试中…",
+      "ok": "连接成功",
+      "fail": "连接失败，请检查配置"
+    }
   },
   "mtSettings": {
     "title": "翻译服务设置",
@@ -191,6 +216,29 @@
       "prompt": "提示词 Prompt",
       "promptHint": "预设可编辑，{{text}} 处会替换为识别到的原文",
       "promptDefault": "你是一个专业的同声传译专家。请将输入的原文精准、自然地翻译为简体中文，只输出译文，不要解释。"
+    },
+    "test": {
+      "label": "连接测试",
+      "help": "测试通过后才会出现在音频监听页的引擎列表中",
+      "run": "测试连接",
+      "testing": "测试中…",
+      "ok": "连接成功",
+      "fail": "连接失败，请检查配置"
+    }
+  },
+  "provider": {
+    "asr": {
+      "whisperTiny": "本地 Whisper · Tiny",
+      "whisperBase": "本地 Whisper · Base",
+      "whisperLarge": "本地 Whisper · Large",
+      "cloudAliyun": "阿里云 ASR",
+      "cloudTencent": "腾讯云 ASR"
+    },
+    "mt": {
+      "google": "Google Translate",
+      "deepl": "DeepL",
+      "llm": "大模型翻译",
+      "llmNamed": "大模型 · {{model}}"
     }
   }
 }

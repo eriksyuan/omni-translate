@@ -55,9 +55,13 @@
       "mic": "Microphone Permission",
       "grant": "Authorize",
       "granted": "Authorized",
+      "micDenied": "Microphone access was denied. Allow OmniTranslate in System Settings → Privacy & Security → Microphone.",
       "blackhole": "Virtual Audio Device BlackHole",
-      "install": "Install",
-      "installed": "Installed"
+      "install": "View install guide",
+      "installed": "Installed",
+      "installGuideHint": "After installing from the guide, return here and we will detect BlackHole automatically.",
+      "recheck": "Recheck",
+      "blackholeGuideLink": "Open install guide"
     },
     "ready": {
       "mic": "Microphone Authorized",
@@ -67,7 +71,12 @@
       "source": "Audio Input Source",
       "locked": "Insufficient permission. Unlock the dependencies above first.",
       "asr": "ASR Engine",
-      "mt": "Translation Engine"
+      "mt": "Translation Engine",
+      "noVerifiedAsr": "Configure and test ASR in Preferences first",
+      "noVerifiedMt": "Configure and test a translation engine in Preferences first"
+    },
+    "action": {
+      "goConfigure": "Configure…"
     },
     "source": {
       "blackhole": "BlackHole 2ch (System Audio Loopback)",
@@ -85,7 +94,13 @@
     },
     "start": {
       "idle": "Start Audio Subtitles",
-      "listening": "Listening to system audio…"
+      "listening": "Listening to system audio…",
+      "listeningMic": "Listening to microphone…",
+      "stop": "Stop listening"
+    },
+    "error": {
+      "captureFailed": "Could not start audio capture. Check the input source and system permissions.",
+      "noAsrOrMt": "Complete ASR and translation connection tests in Preferences before listening."
     },
     "okNote": "Environment ready — panel switched to ready state"
   },
@@ -166,10 +181,20 @@
     "manage": {
       "label": "Model Management",
       "file": "whisper-base.bin · 142 MB",
-      "progress": "64% · downloading",
+      "progress": "No model selected",
+      "ready": "Selected",
+      "pathPlaceholder": "Model file path or placeholder identifier",
       "choose": "Choose a custom model file…"
     },
-    "apiKey": "API Key"
+    "apiKey": "API Key",
+    "test": {
+      "label": "Connection Test",
+      "help": "Only appears in the audio panel after a successful test",
+      "run": "Test connection",
+      "testing": "Testing…",
+      "ok": "Connection successful",
+      "fail": "Connection failed. Check your configuration."
+    }
   },
   "mtSettings": {
     "title": "Translation Service Settings",
@@ -191,6 +216,29 @@
       "prompt": "Prompt",
       "promptHint": "The preset is editable; {{text}} will be replaced with the recognized source text",
       "promptDefault": "You are a professional simultaneous interpreter. Translate the input text accurately and naturally into English. Output only the translation, no explanations."
+    },
+    "test": {
+      "label": "Connection Test",
+      "help": "Only appears in the audio panel after a successful test",
+      "run": "Test connection",
+      "testing": "Testing…",
+      "ok": "Connection successful",
+      "fail": "Connection failed. Check your configuration."
+    }
+  },
+  "provider": {
+    "asr": {
+      "whisperTiny": "Local Whisper · Tiny",
+      "whisperBase": "Local Whisper · Base",
+      "whisperLarge": "Local Whisper · Large",
+      "cloudAliyun": "Aliyun ASR",
+      "cloudTencent": "Tencent Cloud ASR"
+    },
+    "mt": {
+      "google": "Google Translate",
+      "deepl": "DeepL",
+      "llm": "LLM Translation",
+      "llmNamed": "LLM · {{model}}"
     }
   }
 }
