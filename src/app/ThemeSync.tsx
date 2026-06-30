@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export function ThemeSync() {
   useEffect(() => {
@@ -13,16 +12,6 @@ export function ThemeSync() {
     apply();
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
-  }, []);
-
-  useEffect(() => {
-    const window = getCurrentWindow();
-
-    void window.onFocusChanged(({ payload: focused }) => {
-      if (!focused && window.label === "tray-menu") {
-        void window.hide();
-      }
-    });
   }, []);
 
   return null;

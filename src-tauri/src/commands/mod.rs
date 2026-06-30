@@ -33,14 +33,15 @@ pub fn get_platform() -> &'static str {
     platform::current_platform()
 }
 
+pub(crate) fn show_window_internal(app: &AppHandle, label: &str) -> Result<(), String> {
+    let window = window_by_label(app, label)?;
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn show_window(app: AppHandle, label: String) -> Result<(), String> {
-    window_by_label(&app, &label)?
-        .show()
-        .map_err(|e| e.to_string())?;
-    window_by_label(&app, &label)?
-        .set_focus()
-        .map_err(|e| e.to_string())
+    show_window_internal(&app, &label)
 }
 
 #[tauri::command]

@@ -13,19 +13,6 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "label": "tray-menu",
-        "title": "OmniTranslate",
-        "width": 268,
-        "height": 360,
-        "visible": false,
-        "decorations": false,
-        "transparent": true,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "resizable": false,
-        "focus": false
-      },
-      {
         "label": "audio-config",
         "title": "音频实时翻译配置",
         "width": 440,
