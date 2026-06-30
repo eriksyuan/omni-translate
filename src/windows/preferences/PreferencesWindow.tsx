@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { GearIcon, MicIcon, OcrFrameIcon, TranslateIcon } from "@/components/icons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  clearPendingPreferencesSection,
+  PREFERENCES_NAVIGATE_EVENT,
+  readPendingPreferencesSection,
+} from "@/lib/preferences-navigation";
+import type { PreferencesSection } from "@/lib/settings/types";
 import { AsrSettingsSection } from "./AsrSettingsSection";
 import { GeneralSettingsSection } from "./GeneralSettingsSection";
 import { MtSettingsSection } from "./MtSettingsSection";
 import { OcrSettingsSection } from "./OcrSettingsSection";
 
 const SECTIONS = ["general", "ocr", "asr", "mt"] as const;
-type PreferencesSection = (typeof SECTIONS)[number];
 
 const TAB_ICON = {
   general: GearIcon,
@@ -17,9 +25,66 @@ const TAB_ICON = {
   mt: TranslateIcon,
 } as const;
 
+function isPreferencesSection(value: string): value is PreferencesSection {
+  return (SECTIONS as readonly string[]).includes(value);
+}
+
 export function PreferencesWindow() {
   const { t } = useTranslation();
   const [section, setSection] = useState<PreferencesSection>("general");
+
+  const applySection = useCallback((next: PreferencesSection) => {
+    setSection(next);
+    clearPendingPreferencesSection();
+  }, []);
+
+  useEffect(() => {
+    const pending = readPendingPreferencesSection();
+    if (pending) {
+      applySection(pending);
+    }
+  }, [applySection]);
+
+  useEffect(() => {
+    if (!isTauri()) {
+      const handler = (event: Event) => {
+        const detail = (event as CustomEvent<{ section?: string }>).detail;
+        if (detail?.section && isPreferencesSection(detail.section)) {
+          applySection(detail.section);
+        }
+      };
+      window.addEventListener(PREFERENCES_NAVIGATE_EVENT, handler);
+      return () => window.removeEventListener(PREFERENCES_NAVIGATE_EVENT, handler);
+    }
+
+    let unlistenNavigate: (() => void) | undefined;
+    let unlistenFocus: (() => void) | undefined;
+
+    void listen<{ section: PreferencesSection }>(PREFERENCES_NAVIGATE_EVENT, (event) => {
+      if (isPreferencesSection(event.payload.section)) {
+        applySection(event.payload.section);
+      }
+    }).then((unlisten) => {
+      unlistenNavigate = unlisten;
+    });
+
+    void getCurrentWindow()
+      .onFocusChanged(({ payload: focused }) => {
+        if (!focused) return;
+        const pending = readPendingPreferencesSection();
+        if (pending) {
+          applySection(pending);
+        }
+      })
+      .then((unlisten) => {
+        unlistenFocus = unlisten;
+      });
+
+    return () => {
+      unlistenNavigate?.();
+      unlistenFocus?.();
+    };
+  }, [applySection]);
 
   return (
     <Tabs

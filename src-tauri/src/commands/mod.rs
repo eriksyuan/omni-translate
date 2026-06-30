@@ -1,3 +1,5 @@
+pub mod audio;
+
 use crate::platform;
 use crate::{i18n, tray};
 use serde::Serialize;
