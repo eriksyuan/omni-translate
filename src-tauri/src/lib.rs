@@ -24,7 +24,6 @@ pub fn run() {
             tray::setup_tray(app)?;
 
             for label in [
-                "tray-menu",
                 "audio-config",
                 "ocr-permission",
                 "ocr-overlay",

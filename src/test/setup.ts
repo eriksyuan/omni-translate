@@ -3,7 +3,7 @@ import { vi } from "vitest";
 
 vi.mock("@tauri-apps/api/window", () => {
   const mockWindow = {
-    label: "tray-menu",
+    label: "preferences",
     hide: vi.fn().mockResolvedValue(undefined),
     show: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),

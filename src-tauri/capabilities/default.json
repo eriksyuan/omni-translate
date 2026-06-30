@@ -3,7 +3,6 @@
   "identifier": "core",
   "description": "Core permissions shared by all windows",
   "windows": [
-    "tray-menu",
     "audio-config",
     "ocr-permission",
     "ocr-overlay",

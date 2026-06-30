@@ -1,5 +1,4 @@
 export const WINDOW_LABELS = {
-  TRAY_MENU: "tray-menu",
   AUDIO_CONFIG: "audio-config",
   OCR_PERMISSION: "ocr-permission",
   OCR_OVERLAY: "ocr-overlay",
