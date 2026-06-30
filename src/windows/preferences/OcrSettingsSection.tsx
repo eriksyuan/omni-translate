@@ -1,9 +1,19 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckIcon } from "@/windows/shared/icons";
-import styles from "./preferences.module.css";
+import { CheckIcon } from "@/components/icons";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-row";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 type TestState = "idle" | "testing" | "ok";
+
+const OCR_ENGINE_OPTIONS = [
+  { value: "localNative", key: "ocrSettings.engine.localNative" },
+  { value: "localPaddle", key: "ocrSettings.engine.localPaddle" },
+  { value: "cloudBaidu", key: "ocrSettings.engine.cloudBaidu" },
+  { value: "cloudTencent", key: "ocrSettings.engine.cloudTencent" },
+] as const;
 
 export function OcrSettingsSection() {
   const { t } = useTranslation();
@@ -20,74 +30,69 @@ export function OcrSettingsSection() {
   };
 
   return (
-    <section className={styles.pane}>
-      <h2 className={styles.paneTitle}>{t("ocrSettings.title")}</h2>
-      <p className={styles.paneSub}>{t("ocrSettings.sub")}</p>
+    <section className="animate-fade">
+      <h2 className="text-[18px] font-[620]">{t("ocrSettings.title")}</h2>
+      <p className="text-[13px] text-fg-2 mt-1.5 leading-[1.55]">{t("ocrSettings.sub")}</p>
 
-      <div className={styles.group}>
-        <div className={styles.groupTitle}>{t("ocrSettings.group.engine")}</div>
-        <div className={styles.formcard}>
-          <div className={styles.frow}>
-            <div className={styles.left}>
-              <div className="t">{t("ocrSettings.engine.label")}</div>
-              <div className="d">{t("ocrSettings.engine.help")}</div>
-            </div>
-            <div className={styles.ctl}>
-              <div className="select">
-                <select
-                  aria-label={t("ocrSettings.engine.label")}
-                  value={engine}
-                  onChange={(e) => {
-                    setEngine(e.target.value);
-                    setTest("idle");
-                  }}
-                >
-                  <option value="localNative">{t("ocrSettings.engine.localNative")}</option>
-                  <option value="localPaddle">{t("ocrSettings.engine.localPaddle")}</option>
-                  <option value="cloudBaidu">{t("ocrSettings.engine.cloudBaidu")}</option>
-                  <option value="cloudTencent">{t("ocrSettings.engine.cloudTencent")}</option>
-                </select>
-              </div>
-            </div>
-          </div>
+      <div className="mt-[22px]">
+        <div className="eyebrow mb-2.5">
+          {t("ocrSettings.group.engine")}
+        </div>
+        <div className="formcard">
+          <FormField
+            label={t("ocrSettings.engine.label")}
+            description={t("ocrSettings.engine.help")}
+          >
+            <Select
+              ariaLabel={t("ocrSettings.engine.label")}
+              value={engine}
+              onValueChange={(v) => {
+                setEngine(v);
+                setTest("idle");
+              }}
+              options={OCR_ENGINE_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
+            />
+          </FormField>
 
-          <div className={`${styles.reveal} ${isCloud ? styles.revealOpen : ""}`}>
-            <div className={styles.fieldRow}>
-              <label htmlFor="ocrAppId">{t("ocrSettings.appId")}</label>
-              <input className="field" id="ocrAppId" placeholder={t("ocrSettings.appIdPlaceholder")} />
+          <div
+            className={`max-h-0 overflow-hidden transition-[max-height] duration-300 ease-mac ${
+              isCloud ? "max-h-[460px]" : ""
+            }`}
+          >
+            <div className="field-row">
+              <label htmlFor="ocrAppId" className="text-[12.5px] font-[510] text-fg">
+                {t("ocrSettings.appId")}
+              </label>
+              <Input id="ocrAppId" placeholder={t("ocrSettings.appIdPlaceholder")} />
             </div>
-            <div className={styles.fieldRow}>
-              <label htmlFor="ocrSecret">{t("ocrSettings.secret")}</label>
-              <input className="field" id="ocrSecret" type="password" placeholder="••••••••••••••••" />
+            <div className="field-row">
+              <label htmlFor="ocrSecret" className="text-[12.5px] font-[510] text-fg">
+                {t("ocrSettings.secret")}
+              </label>
+              <Input id="ocrSecret" type="password" placeholder="••••••••••••••••" />
             </div>
-            <div className={styles.frow}>
-              <div className={styles.left}>
-                <div className="t">{t("ocrSettings.test.label")}</div>
-                <div className="d">{t("ocrSettings.test.help")}</div>
-              </div>
-              <div className={`${styles.ctl} ${styles.inline}`}>
-                <button type="button" className="btn" onClick={runTest} disabled={test === "testing"}>
-                  {test === "testing" ? t("ocrSettings.test.testing") : t("ocrSettings.test.run")}
-                </button>
-                {test === "ok" ? (
-                  <span className={styles.testResult}>
-                    <CheckIcon size={13} />
-                    {t("ocrSettings.test.ok")}
-                  </span>
-                ) : null}
-              </div>
-            </div>
+            <FormField
+              label={t("ocrSettings.test.label")}
+              description={t("ocrSettings.test.help")}
+              controlClassName="flex gap-2.5 items-center"
+            >
+              <Button onClick={runTest} disabled={test === "testing"}>
+                {test === "testing" ? t("ocrSettings.test.testing") : t("ocrSettings.test.run")}
+              </Button>
+              {test === "ok" ? (
+                <span className="text-[12px] mt-2 inline-flex items-center gap-1.5 text-success">
+                  <CheckIcon size={13} />
+                  {t("ocrSettings.test.ok")}
+                </span>
+              ) : null}
+            </FormField>
           </div>
         </div>
       </div>
 
-      <div className={styles.footbar}>
-        <button type="button" className="btn">
-          {t("preferences.action.reset")}
-        </button>
-        <button type="button" className="btn btn--primary">
-          {t("preferences.action.save")}
-        </button>
+      <div className="footbar">
+        <Button>{t("preferences.action.reset")}</Button>
+        <Button variant="primary">{t("preferences.action.save")}</Button>
       </div>
     </section>
   );

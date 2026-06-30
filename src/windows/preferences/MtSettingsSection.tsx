@@ -1,78 +1,100 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import styles from "./preferences.module.css";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-row";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+
+const MT_PROVIDER_OPTIONS = [
+  { value: "google", label: "Google Translate" },
+  { value: "deepl", label: "DeepL" },
+];
 
 export function MtSettingsSection() {
   const { t } = useTranslation();
   const [baseUrl, setBaseUrl] = useState("https://api.deepseek.com/v1");
   const [model, setModel] = useState("deepseek-chat");
   const [prompt, setPrompt] = useState(t("mtSettings.llm.promptDefault"));
+  const [mtProvider, setMtProvider] = useState("google");
 
   return (
-    <section className={styles.pane}>
-      <h2 className={styles.paneTitle}>{t("mtSettings.title")}</h2>
-      <p className={styles.paneSub}>{t("mtSettings.sub")}</p>
+    <section className="animate-fade">
+      <h2 className="text-[18px] font-[620]">{t("mtSettings.title")}</h2>
+      <p className="text-[13px] text-fg-2 mt-1.5 leading-[1.55]">{t("mtSettings.sub")}</p>
 
-      <div className={styles.group}>
-        <div className={styles.groupTitle}>{t("mtSettings.group.mt")}</div>
-        <div className={styles.formcard}>
-          <div className={styles.frow}>
-            <div className={styles.left}>
-              <div className="t">{t("mtSettings.mt.provider")}</div>
-            </div>
-            <div className={styles.ctl}>
-              <div className="select">
-                <select aria-label={t("mtSettings.mt.provider")}>
-                  <option>Google Translate</option>
-                  <option>DeepL</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div className={styles.fieldRow}>
-            <label htmlFor="mtApiKey">{t("mtSettings.mt.apiKey")}</label>
-            <input className="field" id="mtApiKey" type="password" placeholder={t("mtSettings.mt.apiKeyPlaceholder")} />
+      <div className="mt-[22px]">
+        <div className="eyebrow mb-2.5">
+          {t("mtSettings.group.mt")}
+        </div>
+        <div className="formcard">
+          <FormField label={t("mtSettings.mt.provider")}>
+            <Select
+              ariaLabel={t("mtSettings.mt.provider")}
+              value={mtProvider}
+              onValueChange={setMtProvider}
+              options={MT_PROVIDER_OPTIONS}
+            />
+          </FormField>
+          <div className="field-row">
+            <label htmlFor="mtApiKey" className="text-[12.5px] font-[510] text-fg">
+              {t("mtSettings.mt.apiKey")}
+            </label>
+            <Input
+              id="mtApiKey"
+              type="password"
+              placeholder={t("mtSettings.mt.apiKeyPlaceholder")}
+            />
           </div>
         </div>
       </div>
 
-      <div className={styles.group}>
-        <div className={styles.groupTitle}>{t("mtSettings.group.llm")}</div>
-        <div className={styles.formcard}>
-          <div className={styles.fieldRow}>
-            <label htmlFor="llmBaseUrl">{t("mtSettings.llm.baseUrl")}</label>
-            <input
-              className="field mono"
+      <div className="mt-[22px]">
+        <div className="eyebrow mb-2.5">
+          {t("mtSettings.group.llm")}
+        </div>
+        <div className="formcard">
+          <div className="field-row">
+            <label htmlFor="llmBaseUrl" className="text-[12.5px] font-[510] text-fg">
+              {t("mtSettings.llm.baseUrl")}
+            </label>
+            <Input
               id="llmBaseUrl"
+              mono
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
             />
-            <span className={styles.hint}>{t("mtSettings.llm.baseUrlHint")}</span>
+            <span className="text-[11px] text-fg-2">{t("mtSettings.llm.baseUrlHint")}</span>
           </div>
-          <div className={styles.fieldRow}>
-            <label htmlFor="llmApiKey">{t("mtSettings.llm.apiKey")}</label>
-            <input className="field" id="llmApiKey" type="password" placeholder="sk-••••••••••••••••" />
+          <div className="field-row">
+            <label htmlFor="llmApiKey" className="text-[12.5px] font-[510] text-fg">
+              {t("mtSettings.llm.apiKey")}
+            </label>
+            <Input id="llmApiKey" type="password" placeholder="sk-••••••••••••••••" />
           </div>
-          <div className={styles.fieldRow}>
-            <label htmlFor="llmModel">{t("mtSettings.llm.model")}</label>
-            <input
-              className="field mono"
+          <div className="field-row">
+            <label htmlFor="llmModel" className="text-[12.5px] font-[510] text-fg">
+              {t("mtSettings.llm.model")}
+            </label>
+            <Input
               id="llmModel"
+              mono
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="deepseek-chat / gpt-4o-mini"
             />
           </div>
-          <div className={styles.fieldRow}>
-            <label htmlFor="llmPrompt">{t("mtSettings.llm.prompt")}</label>
-            <textarea
-              className="field"
+          <div className="field-row">
+            <label htmlFor="llmPrompt" className="text-[12.5px] font-[510] text-fg">
+              {t("mtSettings.llm.prompt")}
+            </label>
+            <Textarea
               id="llmPrompt"
               rows={3}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
-            <span className={styles.hint}>
+            <span className="text-[11px] text-fg-2">
               {t("mtSettings.llm.promptHint", {
                 interpolation: { prefix: "[[", suffix: "]]" },
               })}
@@ -81,13 +103,9 @@ export function MtSettingsSection() {
         </div>
       </div>
 
-      <div className={styles.footbar}>
-        <button type="button" className="btn">
-          {t("preferences.action.reset")}
-        </button>
-        <button type="button" className="btn btn--primary">
-          {t("preferences.action.save")}
-        </button>
+      <div className="footbar">
+        <Button>{t("preferences.action.reset")}</Button>
+        <Button variant="primary">{t("preferences.action.save")}</Button>
       </div>
     </section>
   );

@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { isTauri } from "@tauri-apps/api/core";
 import { hideWindow } from "@/lib/tauri";
 import { WINDOW_LABELS } from "@/lib/windows";
-import { CheckIcon, CrosshairIcon, SpinnerIcon } from "@/windows/shared/icons";
-import styles from "./ocr-overlay.module.css";
+import { CheckIcon, CrosshairIcon, SpinnerIcon } from "@/components/icons";
 
 interface Rect {
   x: number;
@@ -32,7 +31,7 @@ export function OcrOverlayWindow() {
   }, []);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest(`.${styles.go}`)) return;
+    if ((e.target as HTMLElement).closest("[data-ocr-go]")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     startRef.current = { x: e.clientX, y: e.clientY };
     setDragging(true);
@@ -59,32 +58,37 @@ export function OcrOverlayWindow() {
 
   return (
     <div
-      className={styles.overlay}
+      className="fixed inset-0 w-full h-full cursor-crosshair bg-transparent select-none touch-none overflow-hidden"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
       {!hasSelection && !dragging ? (
-        <div className={styles.hint}>
-          <CrosshairIcon size={15} style={{ color: "#fff" }} />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-5 pointer-events-none inline-flex items-center gap-2 text-white/90 text-[13px] bg-black/45 px-3.5 py-2 rounded-full backdrop-blur-[8px] shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
+          <CrosshairIcon size={15} className="text-white" />
           {t("ocrOverlay.hint")}
         </div>
       ) : null}
 
       {rect ? (
         <div
-          className={styles.sel}
+          className="ocr-sel"
           style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
         >
-          <span className={styles.res}>
+          <span className="absolute -top-[22px] left-0 font-mono text-[11px] text-white bg-accent px-[7px] py-0.5 rounded-[5px] whitespace-nowrap">
             {Math.round(rect.w * dpr)} × {Math.round(rect.h * dpr)}
           </span>
-          <b className={`${styles.handle} ${styles.tl}`} />
-          <b className={`${styles.handle} ${styles.tr}`} />
-          <b className={`${styles.handle} ${styles.bl}`} />
-          <b className={`${styles.handle} ${styles.br}`} />
+          <b className="absolute w-[9px] h-[9px] bg-white border border-accent border-solid rounded-[2px] -top-[5px] -left-[5px]" />
+          <b className="absolute w-[9px] h-[9px] bg-white border border-accent border-solid rounded-[2px] -top-[5px] -right-[5px]" />
+          <b className="absolute w-[9px] h-[9px] bg-white border border-accent border-solid rounded-[2px] -bottom-[5px] -left-[5px]" />
+          <b className="absolute w-[9px] h-[9px] bg-white border border-accent border-solid rounded-[2px] -bottom-[5px] -right-[5px]" />
           {!dragging && hasSelection ? (
-            <button type="button" className={styles.go} onClick={startRecognize}>
+            <button
+              type="button"
+              data-ocr-go
+              className="absolute -bottom-[42px] right-0 inline-flex items-center gap-[7px] bg-accent text-white border-0 cursor-pointer font-600 text-[13px] px-3.5 py-2 rounded-[9px] shadow-[0_6px_18px_rgba(0,90,255,0.45)] active:translate-y-px"
+              onClick={startRecognize}
+            >
               {recognizing ? (
                 <>
                   <SpinnerIcon size={14} />
