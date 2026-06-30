@@ -59,4 +59,13 @@ be tested without launching the desktop app.
 
 - `src/` contains React window UI and Tauri invoke wrappers.
 - `src-tauri/` contains Rust commands, tray setup, providers, and platform abstractions.
+- `locales/` is the single source of truth for UI and tray translations (`meta.json` + locale JSON files).
+- `scripts/i18n/` validates key parity and syncs locale files into `src-tauri/resources/locales/` for Rust `include_str!` and Tauri bundle resources.
 - `open-design/` is design source only when present; do not edit it from implementation work.
+
+### i18n namespaces
+
+| Prefix | Consumer | Purpose |
+| ------ | -------- | ------- |
+| `tray.*` | Rust | Native tray menu labels |
+| Others | React | WebView UI copy |

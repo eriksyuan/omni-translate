@@ -1,4 +1,5 @@
 use crate::platform;
+use crate::{i18n, tray};
 use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
@@ -31,6 +32,17 @@ pub fn quit_app(app: AppHandle) {
 #[tauri::command]
 pub fn get_platform() -> &'static str {
     platform::current_platform()
+}
+
+#[tauri::command]
+pub fn get_locale() -> String {
+    i18n::get_locale()
+}
+
+#[tauri::command]
+pub fn set_locale(app: AppHandle, locale: String) -> Result<(), String> {
+    i18n::set_locale(&app, &locale)?;
+    tray::refresh_menu(&app)
 }
 
 pub(crate) fn show_window_internal(app: &AppHandle, label: &str) -> Result<(), String> {

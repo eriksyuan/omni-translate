@@ -1,0 +1,45 @@
+{
+  "tray": {
+    "audioConfig": "音频实时翻译…",
+    "ocrPermission": "屏幕区域 OCR 翻译",
+    "preferences": "偏好设置…",
+    "quit": "退出 OmniTranslate",
+    "tooltip": "OmniTranslate"
+  },
+  "windowRoot": {
+    "unknownWindow": "未知窗口"
+  },
+  "preferences": {
+    "title": "偏好设置",
+    "nav": {
+      "general": "通用设置"
+    }
+  },
+  "generalSettings": {
+    "title": "通用设置",
+    "language": {
+      "label": "语言",
+      "option": {
+        "zh-CN": "简体中文",
+        "en": "English"
+      }
+    }
+  },
+  "audioConfig": {
+    "title": "音频实时翻译配置",
+    "description": "动态依赖检测、音频输入源与 ASR / 翻译引擎选择（UI 骨架）。",
+    "placeholder": "Phase 2：接入 BlackHole 检测与状态 A/B 双态。"
+  },
+  "ocrPermission": {
+    "title": "需要屏幕录制权限",
+    "description": "Just-in-Time 权限说明与系统设置引导（UI 骨架）。",
+    "placeholder": "Phase 2：授权检测与跳转系统设置。"
+  },
+  "ocrOverlay": {
+    "hint": "按住拖拽，框选一个区域（UI 骨架）"
+  },
+  "subtitle": {
+    "original": "Welcome to the future of AI translation.",
+    "translation": "欢迎来到 <hl>AI 翻译</hl>的未来。"
+  }
+}

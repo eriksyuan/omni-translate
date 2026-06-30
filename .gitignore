@@ -25,6 +25,7 @@ coverage
 # Rust
 src-tauri/target
 src-tauri/gen
+src-tauri/resources/locales/
 .cargo-home/
 .cargo-home/registry
 .cargo-home/git
