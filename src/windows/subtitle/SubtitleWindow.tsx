@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { SUBTITLE_UPDATE_EVENT, stopAudioSession, type SubtitleUpdatePayload } from "@/lib/audio";
 import { hideWindow } from "@/lib/tauri";
 import { WINDOW_LABELS } from "@/lib/windows";
 import { CloseIcon, CursorClickIcon, LockIcon, OpacityIcon } from "@/components/icons";
@@ -26,15 +28,35 @@ export function SubtitleWindow() {
   const [hovered, setHovered] = useState(false);
   const [opacity, setOpacity] = useState(50);
   const [runId, setRunId] = useState(0);
+  const [subtitle, setSubtitle] = useState<SubtitleUpdatePayload | null>(null);
+  const isLive = subtitle !== null;
 
-  const tokens = useMemo(() => parseTokens(t("subtitle.tokens")), [t]);
+  const originalText = subtitle?.original ?? t("subtitle.original");
+  const tokenSource = subtitle?.tokens ?? subtitle?.translation ?? t("subtitle.tokens");
+  const tokens = useMemo(() => parseTokens(tokenSource), [tokenSource, t]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    let unlisten: (() => void) | undefined;
+
+    void listen<SubtitleUpdatePayload>(SUBTITLE_UPDATE_EVENT, (event) => {
+      setSubtitle(event.payload);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, []);
 
   useEffect(() => {
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) return;
+    if (reduced || isLive) return;
     const id = setInterval(() => setRunId((n) => n + 1), 3400);
     return () => clearInterval(id);
-  }, []);
+  }, [isLive]);
 
   const setPassthrough = (on: boolean) => {
     if (!isTauri()) return;
@@ -55,10 +77,14 @@ export function SubtitleWindow() {
   };
 
   const close = () => {
-    if (isTauri()) void hideWindow(WINDOW_LABELS.SUBTITLE);
+    if (isTauri()) {
+      void stopAudioSession().catch(() => undefined);
+      void hideWindow(WINDOW_LABELS.SUBTITLE);
+    }
   };
 
   const showToolbar = hovered && !locked;
+  const displayTokens = subtitle ? tokens : parseTokens(t("subtitle.tokens"));
 
   return (
     <div className="w-full h-full flex items-center p-3.5">
@@ -80,34 +106,34 @@ export function SubtitleWindow() {
             <b className="absolute w-[11px] h-[11px] border-[1.5px] border-solid border-white/70 bg-black/40 -bottom-[6px] -left-[6px] cursor-nesw-resize rounded-[2px]" />
             <b className="absolute w-[11px] h-[11px] border-[1.5px] border-solid border-white/70 bg-black/40 -bottom-[6px] -right-[6px] cursor-nwse-resize rounded-[2px]" />
             <div className="absolute top-2.5 right-3 inline-flex items-center gap-1 bg-[rgba(20,20,24,0.82)] border border-white/14 border-solid rounded-[9px] p-1 backdrop-blur-[12px]">
-            <button
-              type="button"
-              className="appearance-none border-0 bg-transparent text-white/82 cursor-pointer w-7 h-7 rounded-[6px] grid place-items-center hover:bg-white/14 hover:text-white"
-              onClick={toggleLock}
-              title={t("subtitle.lock")}
-            >
-              <LockIcon size={15} />
-            </button>
-            <span className="flex items-center gap-1.5 px-1.5 text-white/70" title={t("subtitle.opacity")}>
-              <OpacityIcon size={14} />
-              <Slider
-                min={20}
-                max={80}
-                step={1}
-                value={[opacity]}
-                onValueChange={([v]) => setOpacity(v ?? opacity)}
-                aria-label={t("subtitle.opacity")}
-              />
-            </span>
-            <button
-              type="button"
-              className="appearance-none border-0 bg-transparent text-white/82 cursor-pointer w-7 h-7 rounded-[6px] grid place-items-center hover:bg-white/14 hover:text-white"
-              onClick={close}
-              title={t("subtitle.close")}
-            >
-              <CloseIcon size={15} />
-            </button>
-          </div>
+              <button
+                type="button"
+                className="appearance-none border-0 bg-transparent text-white/82 cursor-pointer w-7 h-7 rounded-[6px] grid place-items-center hover:bg-white/14 hover:text-white"
+                onClick={toggleLock}
+                title={t("subtitle.lock")}
+              >
+                <LockIcon size={15} />
+              </button>
+              <span className="flex items-center gap-1.5 px-1.5 text-white/70" title={t("subtitle.opacity")}>
+                <OpacityIcon size={14} />
+                <Slider
+                  min={20}
+                  max={80}
+                  step={1}
+                  value={[opacity]}
+                  onValueChange={([v]) => setOpacity(v ?? opacity)}
+                  aria-label={t("subtitle.opacity")}
+                />
+              </span>
+              <button
+                type="button"
+                className="appearance-none border-0 bg-transparent text-white/82 cursor-pointer w-7 h-7 rounded-[6px] grid place-items-center hover:bg-white/14 hover:text-white"
+                onClick={close}
+                title={t("subtitle.close")}
+              >
+                <CloseIcon size={15} />
+              </button>
+            </div>
           </>
         ) : null}
 
@@ -124,24 +150,24 @@ export function SubtitleWindow() {
             locked && "text-white/90 shadow-[0_1px_3px_#000,0_0_1px_#000]",
           )}
         >
-          {t("subtitle.original")}
+          {originalText}
         </div>
         <div
           className={cn(
             "text-[27px] font-700 leading-[1.3] text-white tracking-[-0.01em]",
             locked && "subtitle-locked-text",
           )}
-          key={runId}
+          key={isLive ? "live" : runId}
         >
-          {tokens.map((token, i) => (
+          {displayTokens.map((token, i) => (
             <span
-              key={`${runId}-${i}`}
+              key={i}
               className={cn(
-                "animate-fadein opacity-0",
+                !isLive && "animate-fadein opacity-0",
                 token.hl && "text-hi",
                 locked && token.hl && "subtitle-locked-hl",
               )}
-              style={{ animationDelay: `${i * 0.22}s` }}
+              style={!isLive ? { animationDelay: `${i * 0.22}s` } : undefined}
             >
               {token.text}
             </span>

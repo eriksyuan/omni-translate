@@ -17,6 +17,7 @@ import {
 } from "@/theme";
 import { Select } from "@/components/ui/select";
 import { FormField } from "@/components/ui/form-row";
+import { DiagnosticsLogSection } from "./DiagnosticsLogSection";
 
 const LOCALE_OPTION_KEYS = {
   "zh-CN": "generalSettings.language.option.zh-CN",
@@ -116,6 +117,7 @@ export function GeneralSettingsSection() {
           </FormField>
         </div>
       </div>
+      <DiagnosticsLogSection />
     </section>
   );
 }

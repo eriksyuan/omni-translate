@@ -15,11 +15,13 @@
       "general": "通用",
       "ocr": "OCR 服务",
       "asr": "音频 ASR",
-      "mt": "翻译服务"
+      "mt": "翻译服务",
+      "speechTranslate": "语音翻译"
     },
     "action": {
       "reset": "恢复默认",
-      "save": "保存"
+      "save": "保存",
+      "saved": "已保存"
     }
   },
   "generalSettings": {
@@ -46,6 +48,24 @@
       }
     }
   },
+  "diagnosticsLogs": {
+    "group": "诊断日志",
+    "help": "音频采集与语音翻译的运行日志。字幕漏段或不更新时，可在此排查。",
+    "level": {
+      "label": "最低级别",
+      "trace": "Trace",
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
+    },
+    "autoRefresh": "自动刷新（2 秒）",
+    "refresh": "刷新",
+    "copy": "复制",
+    "openFolder": "打开日志目录",
+    "clearBuffer": "清空查看器缓冲",
+    "empty": "暂无日志。开始一次翻译会话后即可收集。"
+  },
   "audioConfig": {
     "panelTitle": "开启系统音频同传",
     "banner": {
@@ -53,6 +73,8 @@
     },
     "dep": {
       "mic": "麦克风权限",
+      "micForBlackhole": "麦克风权限（BlackHole 内录也需要）",
+      "micForBlackholeHint": "macOS 即使用 BlackHole 采集系统音频，也需要授予麦克风权限。",
       "grant": "点击授权",
       "granted": "已授权",
       "micDenied": "麦克风权限被拒绝，请在「系统设置 → 隐私与安全性 → 麦克风」中允许 OmniTranslate。",
@@ -69,18 +91,31 @@
     },
     "field": {
       "source": "音频输入源",
+      "micDevice": "麦克风设备",
       "locked": "权限不足，请先解锁上方依赖",
+      "mode": "翻译模式",
       "asr": "ASR 引擎",
       "mt": "翻译引擎",
+      "speechTranslate": "语音翻译引擎",
       "noVerifiedAsr": "请先在偏好设置中配置并测试 ASR",
-      "noVerifiedMt": "请先在偏好设置中配置并测试翻译引擎"
+      "noVerifiedMt": "请先在偏好设置中配置并测试翻译引擎",
+      "noVerifiedSpeechTranslate": "请先在偏好设置中配置并测试语音翻译"
+    },
+    "mode": {
+      "modular": "分体组合",
+      "modularHint": "分别选择 ASR 与翻译引擎",
+      "integrated": "一体翻译",
+      "integratedHint": "使用成品实时语音翻译接口"
     },
     "action": {
       "goConfigure": "去配置…"
     },
     "source": {
       "blackhole": "BlackHole 2ch（系统声音内录）",
-      "mic": "MacBook Pro 麦克风"
+      "mic": "麦克风"
+    },
+    "device": {
+      "default": "{{name}}（默认）"
     },
     "asr": {
       "whisperBase": "本地 Whisper · Base",
@@ -100,7 +135,8 @@
     },
     "error": {
       "captureFailed": "无法启动音频捕捉，请检查输入源与系统权限。",
-      "noAsrOrMt": "请先在偏好设置中完成 ASR 与翻译引擎的测试连接。"
+      "noAsrOrMt": "请先在偏好设置中完成 ASR 与翻译引擎的测试连接。",
+      "noSpeechTranslate": "请先在偏好设置中完成语音翻译的连接测试后再开始监听。"
     },
     "okNote": "环境已就绪 — 面板已切换至就绪状态"
   },
@@ -187,6 +223,20 @@
       "choose": "自定义选择模型文件…"
     },
     "apiKey": "API Key",
+    "cloud": {
+      "aliyun": {
+        "appKey": "AppKey",
+        "appKeyPlaceholder": "NLS 项目 AppKey",
+        "accessKeyId": "AccessKey ID",
+        "accessKeySecret": "AccessKey Secret",
+        "help": "在阿里云控制台创建 AccessKey，并在智能语音交互控制台获取 AppKey。"
+      },
+      "tencent": {
+        "secretId": "SecretId",
+        "secretKey": "SecretKey",
+        "help": "在腾讯云访问管理控制台创建 API 密钥（SecretId / SecretKey）。"
+      }
+    },
     "test": {
       "label": "连接测试",
       "help": "测试通过后才会出现在音频监听页的引擎列表中",
@@ -239,6 +289,52 @@
       "deepl": "DeepL",
       "llm": "大模型翻译",
       "llmNamed": "大模型 · {{model}}"
+    },
+    "speechTranslate": {
+      "tencentRealtime": "腾讯云 · 实时语音翻译"
+    }
+  },
+  "speechTranslateSettings": {
+    "title": "语音翻译",
+    "sub": "配置一体式实时语音翻译（单次连接同时返回识别与译文）。",
+    "appId": {
+      "label": "App ID",
+      "help": "腾讯云账号 AppID（WebSocket 接口必填，与 SecretId 不同）。",
+      "placeholder": "125922****"
+    },
+    "secretId": {
+      "label": "SecretId",
+      "help": "腾讯云 API 密钥 SecretId。",
+      "placeholder": "AKID****"
+    },
+    "secretKey": {
+      "label": "SecretKey",
+      "help": "用于请求签名的 SecretKey。",
+      "placeholder": "****"
+    },
+    "source": {
+      "label": "源语言",
+      "help": "采集音频的语言。",
+      "en": "英语",
+      "zh": "中文",
+      "zhEn": "中英混合"
+    },
+    "target": {
+      "label": "目标语言",
+      "help": "v1 固定为简体中文。",
+      "zh": "简体中文"
+    },
+    "transModel": {
+      "label": "翻译模型",
+      "help": "腾讯混元翻译模型档位。",
+      "lite": "混元轻量版（默认）",
+      "standard": "混元标准版"
+    },
+    "action": {
+      "test": "测试连接",
+      "testing": "测试中…",
+      "testOk": "连接成功",
+      "testFailed": "连接失败，请检查 App ID 与密钥。"
     }
   }
 }

@@ -15,11 +15,13 @@
       "general": "General",
       "ocr": "OCR Service",
       "asr": "Audio ASR",
-      "mt": "Translation"
+      "mt": "Translation",
+      "speechTranslate": "Speech Translate"
     },
     "action": {
       "reset": "Restore Defaults",
-      "save": "Save"
+      "save": "Save",
+      "saved": "Saved"
     }
   },
   "generalSettings": {
@@ -46,6 +48,24 @@
       }
     }
   },
+  "diagnosticsLogs": {
+    "group": "Diagnostics Logs",
+    "help": "Runtime logs for audio capture and speech translation. Use this when subtitles skip segments or stop updating.",
+    "level": {
+      "label": "Minimum level",
+      "trace": "Trace",
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
+    },
+    "autoRefresh": "Auto refresh (2s)",
+    "refresh": "Refresh",
+    "copy": "Copy",
+    "openFolder": "Open log folder",
+    "clearBuffer": "Clear viewer buffer",
+    "empty": "No log entries yet. Start a translation session to collect logs."
+  },
   "audioConfig": {
     "panelTitle": "Enable System Audio Translation",
     "banner": {
@@ -53,6 +73,8 @@
     },
     "dep": {
       "mic": "Microphone Permission",
+      "micForBlackhole": "Microphone Permission (required for BlackHole capture)",
+      "micForBlackholeHint": "macOS requires microphone access even when capturing system audio via BlackHole.",
       "grant": "Authorize",
       "granted": "Authorized",
       "micDenied": "Microphone access was denied. Allow OmniTranslate in System Settings → Privacy & Security → Microphone.",
@@ -69,18 +91,31 @@
     },
     "field": {
       "source": "Audio Input Source",
+      "micDevice": "Microphone Device",
       "locked": "Insufficient permission. Unlock the dependencies above first.",
+      "mode": "Translation mode",
       "asr": "ASR Engine",
       "mt": "Translation Engine",
+      "speechTranslate": "Speech translation engine",
       "noVerifiedAsr": "Configure and test ASR in Preferences first",
-      "noVerifiedMt": "Configure and test a translation engine in Preferences first"
+      "noVerifiedMt": "Configure and test a translation engine in Preferences first",
+      "noVerifiedSpeechTranslate": "Configure and test speech translation in Preferences first"
+    },
+    "mode": {
+      "modular": "Modular",
+      "modularHint": "Pick ASR and translation engines separately",
+      "integrated": "Integrated",
+      "integratedHint": "Use an all-in-one real-time speech translation API"
     },
     "action": {
       "goConfigure": "Configure…"
     },
     "source": {
       "blackhole": "BlackHole 2ch (System Audio Loopback)",
-      "mic": "MacBook Pro Microphone"
+      "mic": "Microphone"
+    },
+    "device": {
+      "default": "{{name}} (Default)"
     },
     "asr": {
       "whisperBase": "Local Whisper · Base",
@@ -100,7 +135,8 @@
     },
     "error": {
       "captureFailed": "Could not start audio capture. Check the input source and system permissions.",
-      "noAsrOrMt": "Complete ASR and translation connection tests in Preferences before listening."
+      "noAsrOrMt": "Complete ASR and translation connection tests in Preferences before listening.",
+      "noSpeechTranslate": "Complete speech translation connection test in Preferences before listening."
     },
     "okNote": "Environment ready — panel switched to ready state"
   },
@@ -187,6 +223,20 @@
       "choose": "Choose a custom model file…"
     },
     "apiKey": "API Key",
+    "cloud": {
+      "aliyun": {
+        "appKey": "AppKey",
+        "appKeyPlaceholder": "NLS project AppKey",
+        "accessKeyId": "AccessKey ID",
+        "accessKeySecret": "AccessKey Secret",
+        "help": "Create an AccessKey in Aliyun RAM and obtain an AppKey from the Intelligent Speech Interaction console."
+      },
+      "tencent": {
+        "secretId": "SecretId",
+        "secretKey": "SecretKey",
+        "help": "Create an API key (SecretId / SecretKey) in Tencent Cloud CAM."
+      }
+    },
     "test": {
       "label": "Connection Test",
       "help": "Only appears in the audio panel after a successful test",
@@ -239,6 +289,52 @@
       "deepl": "DeepL",
       "llm": "LLM Translation",
       "llmNamed": "LLM · {{model}}"
+    },
+    "speechTranslate": {
+      "tencentRealtime": "Tencent Cloud · Real-time Speech Translate"
+    }
+  },
+  "speechTranslateSettings": {
+    "title": "Speech Translation",
+    "sub": "Configure integrated real-time speech translation (ASR + MT in one stream).",
+    "appId": {
+      "label": "App ID",
+      "help": "Tencent Cloud account App ID (required for WebSocket API, different from SecretId).",
+      "placeholder": "125922****"
+    },
+    "secretId": {
+      "label": "SecretId",
+      "help": "API key SecretId from Tencent Cloud console.",
+      "placeholder": "AKID****"
+    },
+    "secretKey": {
+      "label": "SecretKey",
+      "help": "API key SecretKey used for request signing.",
+      "placeholder": "****"
+    },
+    "source": {
+      "label": "Source language",
+      "help": "Language of the audio being captured.",
+      "en": "English",
+      "zh": "Chinese",
+      "zhEn": "Chinese + English mixed"
+    },
+    "target": {
+      "label": "Target language",
+      "help": "v1 fixed to Simplified Chinese.",
+      "zh": "Chinese (Simplified)"
+    },
+    "transModel": {
+      "label": "Translation model",
+      "help": "Tencent Hunyuan translation model tier.",
+      "lite": "Hunyuan Lite (default)",
+      "standard": "Hunyuan Standard"
+    },
+    "action": {
+      "test": "Test connection",
+      "testing": "Testing…",
+      "testOk": "Connection successful",
+      "testFailed": "Connection failed. Check App ID and API keys."
     }
   }
 }

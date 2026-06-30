@@ -4,6 +4,7 @@ import type {
   MtProfileId,
   MtTraditionalProvider,
   ProviderKind,
+  SpeechTranslateProfileId,
   WhisperModel,
 } from "@/lib/settings/types";
 
@@ -11,7 +12,7 @@ export const CONFIGURE_SENTINEL = "__configure__";
 
 interface ProviderMeta {
   labelKey: string;
-  settingsSection: "asr" | "mt";
+  settingsSection: "asr" | "mt" | "speechTranslate";
   kind: ProviderKind;
 }
 
@@ -26,6 +27,14 @@ const ASR_REGISTRY: Record<AsrProfileId, ProviderMeta> = {
 const MT_TRADITIONAL_REGISTRY: Record<MtTraditionalProvider, ProviderMeta> = {
   google: { labelKey: "provider.mt.google", settingsSection: "mt", kind: "mt" },
   deepl: { labelKey: "provider.mt.deepl", settingsSection: "mt", kind: "mt" },
+};
+
+const SPEECH_TRANSLATE_REGISTRY: Record<SpeechTranslateProfileId, ProviderMeta> = {
+  "speech:tencent:realtime": {
+    labelKey: "provider.speechTranslate.tencentRealtime",
+    settingsSection: "speechTranslate",
+    kind: "speechTranslate",
+  },
 };
 
 export function asrProfileIdForWhisper(model: WhisperModel): AsrProfileId {
@@ -60,12 +69,19 @@ export function getMtProviderMeta(id: MtProfileId): ProviderMeta {
   return { labelKey: "provider.mt.llm", settingsSection: "mt", kind: "mt" };
 }
 
+export function getSpeechTranslateProviderMeta(id: SpeechTranslateProfileId): ProviderMeta {
+  return SPEECH_TRANSLATE_REGISTRY[id];
+}
+
 export function getProviderMeta(id: string, kind: ProviderKind): ProviderMeta | null {
   if (kind === "asr" && id in ASR_REGISTRY) {
     return ASR_REGISTRY[id as AsrProfileId];
   }
   if (kind === "mt" && (id.startsWith("mt:traditional:") || id.startsWith("mt:llm:"))) {
     return getMtProviderMeta(id as MtProfileId);
+  }
+  if (kind === "speechTranslate" && id in SPEECH_TRANSLATE_REGISTRY) {
+    return SPEECH_TRANSLATE_REGISTRY[id as SpeechTranslateProfileId];
   }
   return null;
 }

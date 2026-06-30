@@ -7,7 +7,12 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use thiserror::Error;
 
+use crate::{log_debug, log_error};
+
+use super::buffer::PcmWindowBuffer;
 use super::devices::{list_input_devices, resolve_device};
+use super::integrated_feeder::IntegratedPcmInput;
+use super::session::{forward_chunk_to_integrated, forward_chunk_to_pipeline};
 use super::types::{
     AudioCaptureStatus, AudioChunkPayload, AudioInputDevice, AudioSourceKind,
 };
@@ -15,6 +20,11 @@ use super::types::{
 const EVENT_AUDIO_CHUNK: &str = "audio://chunk";
 const EVENT_AUDIO_ERROR: &str = "audio://error";
 const EVENT_AUDIO_STATE: &str = "audio://state";
+
+pub enum PipelineFeed {
+    Modular(Sender<Vec<i16>>),
+    Integrated(Sender<IntegratedPcmInput>),
+}
 
 #[derive(Debug, Error)]
 pub enum CaptureError {
@@ -66,6 +76,8 @@ impl AudioCaptureManager {
         &self,
         app: AppHandle,
         source: AudioSourceKind,
+        device_id: Option<String>,
+        pipeline_feed: Option<PipelineFeed>,
     ) -> Result<AudioCaptureStatus, CaptureError> {
         let mut runtime_guard = self
             .runtime
@@ -77,7 +89,7 @@ impl AudioCaptureManager {
         }
 
         let devices = list_input_devices()?;
-        let device = resolve_device(&devices, source)?;
+        let device = resolve_device(&devices, source, device_id.as_deref())?;
         let device_name = device.name().map_err(|e| CaptureError::Config(e.to_string()))?;
 
         let supported = device
@@ -90,16 +102,45 @@ impl AudioCaptureManager {
 
         let (stop_tx, stop_rx) = mpsc::channel::<()>();
         let (sample_tx, sample_rx) = mpsc::channel::<Vec<i16>>();
+        let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
 
+        let app_for_errors = app.clone();
         let capture_device_name = device_name.clone();
-        let capture_thread = thread::spawn(move || run_capture_thread(
-            device,
-            stream_config,
-            sample_format,
-            sample_tx,
-            stop_rx,
-            capture_device_name,
-        ));
+        let capture_thread = thread::spawn(move || {
+            run_capture_thread(
+                device,
+                stream_config,
+                sample_format,
+                sample_tx,
+                stop_rx,
+                capture_device_name,
+                app_for_errors,
+                ready_tx,
+            )
+        });
+
+        match ready_rx.recv_timeout(Duration::from_secs(3)) {
+            Ok(Ok(())) => {}
+            Ok(Err(message)) => {
+                let _ = ready_rx.recv_timeout(Duration::from_millis(0));
+                let _ = stop_tx.send(());
+                let _ = capture_thread.join();
+                eprintln!("[audio] capture failed to start on {device_name}: {message}");
+                log_error!("capture", "failed to start on {device_name}: {message}");
+                emit_capture_error(&app, message.clone());
+                return Err(CaptureError::PlayStream(message));
+            }
+            Err(_) => {
+                let _ = stop_tx.send(());
+                let _ = capture_thread.join();
+                let message = "audio input stream did not start in time (check microphone permission)"
+                    .to_string();
+                eprintln!("[audio] capture start timed out on {device_name}");
+                log_error!("capture", "start timed out on {device_name}");
+                emit_capture_error(&app, message.clone());
+                return Err(CaptureError::PlayStream(message));
+            }
+        }
 
         let status = AudioCaptureStatus {
             active: true,
@@ -115,9 +156,10 @@ impl AudioCaptureManager {
         }
 
         let emitter_status = Arc::clone(&self.status);
-        let _ = emit_capture_state(&app, &status);
+        let emitter_app = app.clone();
+        let _ = emit_capture_state(&emitter_app, &status);
         let emitter_thread = thread::spawn(move || {
-            emit_samples_loop(app, sample_rx, emitter_status);
+            emit_samples_loop(emitter_app, sample_rx, emitter_status, pipeline_feed);
         });
 
         *runtime_guard = Some(CaptureRuntime {
@@ -190,39 +232,56 @@ fn run_capture_thread(
     sample_tx: Sender<Vec<i16>>,
     stop_rx: Receiver<()>,
     device_name: String,
+    app: AppHandle,
+    ready_tx: Sender<Result<(), String>>,
 ) -> Result<(), String> {
-    let err_fn = move |err| eprintln!("[audio] stream error on {device_name}: {err}");
+    let err_fn = move |err| {
+        eprintln!("[audio] stream error on {device_name}: {err}");
+        log_error!("capture", "stream error on {device_name}: {err}");
+        emit_capture_error(&app, format!("stream error: {err}"));
+    };
 
-    let stream = match sample_format {
-        SampleFormat::F32 => device.build_input_stream(
-            &config,
-            move |data: &[f32], _| send_samples(&sample_tx, data.iter().copied().map(f32_to_i16)),
-            err_fn,
-            None,
-        ),
-        SampleFormat::I16 => device.build_input_stream(
-            &config,
-            move |data: &[i16], _| send_samples(&sample_tx, data.iter().copied()),
-            err_fn,
-            None,
-        ),
-        SampleFormat::U16 => device.build_input_stream(
-            &config,
-            move |data: &[u16], _| {
-                send_samples(&sample_tx, data.iter().copied().map(u16_to_i16))
-            },
-            err_fn,
-            None,
-        ),
-        other => {
-            return Err(format!("unsupported sample format: {other:?}"));
+    let started: Result<cpal::Stream, String> = (|| {
+        let stream = match sample_format {
+            SampleFormat::F32 => device.build_input_stream(
+                &config,
+                move |data: &[f32], _| send_samples(&sample_tx, data.iter().copied().map(f32_to_i16)),
+                err_fn,
+                None,
+            ),
+            SampleFormat::I16 => device.build_input_stream(
+                &config,
+                move |data: &[i16], _| send_samples(&sample_tx, data.iter().copied()),
+                err_fn,
+                None,
+            ),
+            SampleFormat::U16 => device.build_input_stream(
+                &config,
+                move |data: &[u16], _| {
+                    send_samples(&sample_tx, data.iter().copied().map(u16_to_i16))
+                },
+                err_fn,
+                None,
+            ),
+            other => {
+                return Err(format!("unsupported sample format: {other:?}"));
+            }
         }
-    }
-    .map_err(|e| format!("build input stream: {e}"))?;
+        .map_err(|e| format!("build input stream: {e}"))?;
 
-    stream
-        .play()
-        .map_err(|e| format!("start input stream: {e}"))?;
+        stream
+            .play()
+            .map_err(|e| format!("start input stream: {e}"))?;
+
+        Ok(stream)
+    })();
+
+    let _ = ready_tx.send(started.as_ref().map(|_| ()).map_err(|e| e.clone()));
+
+    let stream = match started {
+        Ok(stream) => stream,
+        Err(err) => return Err(err),
+    };
 
     while stop_rx.recv_timeout(Duration::from_millis(50)).is_err() {}
 
@@ -245,8 +304,15 @@ fn emit_samples_loop(
     app: AppHandle,
     sample_rx: Receiver<Vec<i16>>,
     status: Arc<Mutex<AudioCaptureStatus>>,
+    pipeline_feed: Option<PipelineFeed>,
 ) {
     let mut sequence = 0_u64;
+    let mut window_buffer = PcmWindowBuffer::new(0, 1);
+    let (modular_tx, integrated_tx) = match pipeline_feed {
+        Some(PipelineFeed::Modular(tx)) => (Some(tx), None),
+        Some(PipelineFeed::Integrated(tx)) => (None, Some(tx)),
+        None => (None, None),
+    };
 
     while let Ok(samples) = sample_rx.recv() {
         let (sample_rate, channels) = {
@@ -259,7 +325,20 @@ fn emit_samples_loop(
             )
         };
 
+        if modular_tx.is_some() {
+            forward_chunk_to_pipeline(
+                &mut window_buffer,
+                &modular_tx,
+                &samples,
+                sample_rate,
+                channels,
+            );
+        } else {
+            forward_chunk_to_integrated(&integrated_tx, &samples, sample_rate, channels);
+        }
+
         sequence += 1;
+        let sample_count = samples.len();
         let payload = AudioChunkPayload {
             sequence,
             sample_rate,
@@ -273,6 +352,13 @@ fn emit_samples_loop(
 
         if app.emit(EVENT_AUDIO_CHUNK, payload).is_err() {
             break;
+        }
+
+        if sequence == 1 || sequence.is_multiple_of(50) {
+            log_debug!(
+                "capture",
+                "chunk seq={sequence} samples={sample_count} rate={sample_rate} ch={channels}",
+            );
         }
     }
 }

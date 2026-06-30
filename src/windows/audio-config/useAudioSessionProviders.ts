@@ -7,8 +7,10 @@ import {
   CONFIGURE_SENTINEL,
   getProviderMeta,
   type AsrProfileId,
+  type AudioTranslationMode,
   type MtProfileId,
   type ProviderKind,
+  type SpeechTranslateProfileId,
 } from "@/lib/settings";
 import { getVerifiedProfileIds, loadAudioSession } from "@/lib/settings/storage";
 import { SETTINGS_VERIFIED_CHANGED_EVENT } from "@/lib/preferences-navigation";
@@ -18,12 +20,15 @@ export interface VerifiedProviderOption {
   label: string;
 }
 
-export function useVerifiedProviders() {
+export function useAudioSessionProviders() {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<AudioTranslationMode>("modular");
   const [asrOptions, setAsrOptions] = useState<VerifiedProviderOption[]>([]);
   const [mtOptions, setMtOptions] = useState<VerifiedProviderOption[]>([]);
+  const [speechOptions, setSpeechOptions] = useState<VerifiedProviderOption[]>([]);
   const [selectedAsrId, setSelectedAsrId] = useState<AsrProfileId | undefined>();
   const [selectedMtId, setSelectedMtId] = useState<MtProfileId | undefined>();
+  const [selectedSpeechId, setSelectedSpeechId] = useState<SpeechTranslateProfileId | undefined>();
 
   const buildOptions = useCallback(
     (kind: ProviderKind, ids: string[]): VerifiedProviderOption[] => {
@@ -43,10 +48,13 @@ export function useVerifiedProviders() {
   const refresh = useCallback(() => {
     const asrIds = getVerifiedProfileIds("asr") as AsrProfileId[];
     const mtIds = getVerifiedProfileIds("mt") as MtProfileId[];
+    const speechIds = getVerifiedProfileIds("speechTranslate") as SpeechTranslateProfileId[];
     const session = loadAudioSession();
 
+    setMode(session.mode ?? "modular");
     setAsrOptions(buildOptions("asr", asrIds));
     setMtOptions(buildOptions("mt", mtIds));
+    setSpeechOptions(buildOptions("speechTranslate", speechIds));
 
     setSelectedAsrId((current) => {
       if (current && asrIds.includes(current)) return current;
@@ -58,6 +66,14 @@ export function useVerifiedProviders() {
       if (current && mtIds.includes(current)) return current;
       if (session.mtId && mtIds.includes(session.mtId)) return session.mtId;
       return mtIds[0];
+    });
+
+    setSelectedSpeechId((current) => {
+      if (current && speechIds.includes(current)) return current;
+      if (session.speechTranslateId && speechIds.includes(session.speechTranslateId)) {
+        return session.speechTranslateId;
+      }
+      return speechIds[0];
     });
   }, [buildOptions]);
 
@@ -93,16 +109,36 @@ export function useVerifiedProviders() {
     };
   }, [refresh]);
 
+  const hasVerifiedAsr = asrOptions.length > 0;
+  const hasVerifiedMt = mtOptions.length > 0;
+  const hasVerifiedSpeech = speechOptions.length > 0;
+
+  const canStartModular = hasVerifiedAsr && hasVerifiedMt && !!selectedAsrId && !!selectedMtId;
+  const canStartIntegrated = hasVerifiedSpeech && !!selectedSpeechId;
+  const canStart = mode === "modular" ? canStartModular : canStartIntegrated;
+
   return {
+    mode,
+    setMode,
     asrOptions,
     mtOptions,
+    speechOptions,
     selectedAsrId,
     selectedMtId,
+    selectedSpeechId,
     setSelectedAsrId,
     setSelectedMtId,
+    setSelectedSpeechId,
     refresh,
-    hasVerifiedAsr: asrOptions.length > 0,
-    hasVerifiedMt: mtOptions.length > 0,
+    hasVerifiedAsr,
+    hasVerifiedMt,
+    hasVerifiedSpeech,
+    canStart,
+    canStartModular,
+    canStartIntegrated,
     configureSentinel: CONFIGURE_SENTINEL,
   };
 }
+
+/** @deprecated Use useAudioSessionProviders */
+export const useVerifiedProviders = useAudioSessionProviders;

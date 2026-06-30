@@ -58,6 +58,7 @@ pub fn blackhole_installed() -> Result<bool, DeviceError> {
 pub fn resolve_device(
     devices: &[AudioInputDevice],
     source: super::types::AudioSourceKind,
+    device_id: Option<&str>,
 ) -> Result<cpal::Device, DeviceError> {
     let host = cpal::default_host();
     let input_devices: Vec<_> = host
@@ -65,18 +66,26 @@ pub fn resolve_device(
         .map_err(|e| DeviceError::Enumerate(e.to_string()))?
         .collect();
 
-    let target_name = match source {
-        super::types::AudioSourceKind::Blackhole => devices
+    let target_name = if let Some(id) = device_id.filter(|id| !id.is_empty()) {
+        devices
             .iter()
-            .find(|device| device.is_blackhole)
+            .find(|device| device.id == id || device.name == id)
             .map(|device| device.name.clone())
-            .ok_or_else(|| DeviceError::SourceUnavailable("blackhole".into()))?,
-        super::types::AudioSourceKind::Mic => devices
-            .iter()
-            .find(|device| !device.is_blackhole && device.is_default)
-            .or_else(|| devices.iter().find(|device| !device.is_blackhole))
-            .map(|device| device.name.clone())
-            .ok_or_else(|| DeviceError::SourceUnavailable("microphone".into()))?,
+            .ok_or_else(|| DeviceError::NotFound(id.to_string()))?
+    } else {
+        match source {
+            super::types::AudioSourceKind::Blackhole => devices
+                .iter()
+                .find(|device| device.is_blackhole)
+                .map(|device| device.name.clone())
+                .ok_or_else(|| DeviceError::SourceUnavailable("blackhole".into()))?,
+            super::types::AudioSourceKind::Mic => devices
+                .iter()
+                .find(|device| !device.is_blackhole && device.is_default)
+                .or_else(|| devices.iter().find(|device| !device.is_blackhole))
+                .map(|device| device.name.clone())
+                .ok_or_else(|| DeviceError::SourceUnavailable("microphone".into()))?,
+        }
     };
 
     input_devices

@@ -7,6 +7,8 @@ import type {
   MtProfileId,
   ProviderKind,
   SettingsStore,
+  SpeechTranslateProfileConfig,
+  SpeechTranslateProfileId,
 } from "@/lib/settings/types";
 
 const STORAGE_KEY = "omnitranslate:settings:v1";
@@ -14,6 +16,7 @@ const STORAGE_KEY = "omnitranslate:settings:v1";
 const EMPTY_STORE: SettingsStore = {
   asr: { profiles: {}, verified: [] },
   mt: { profiles: {}, verified: [] },
+  speechTranslate: { profiles: {}, verified: [] },
   audioSession: {},
 };
 
@@ -30,6 +33,10 @@ function readStore(): SettingsStore {
       mt: {
         profiles: parsed.mt?.profiles ?? {},
         verified: parsed.mt?.verified ?? [],
+      },
+      speechTranslate: {
+        profiles: parsed.speechTranslate?.profiles ?? {},
+        verified: parsed.speechTranslate?.verified ?? [],
       },
       audioSession: parsed.audioSession ?? {},
     };
@@ -100,9 +107,39 @@ export function revokeMtVerified(id: MtProfileId) {
   notifyVerifiedChanged();
 }
 
+export function saveSpeechTranslateProfile(
+  id: SpeechTranslateProfileId,
+  config: SpeechTranslateProfileConfig,
+) {
+  const store = readStore();
+  store.speechTranslate.profiles[id] = config;
+  writeStore(store);
+}
+
+export function markSpeechTranslateVerified(id: SpeechTranslateProfileId) {
+  const store = readStore();
+  if (!store.speechTranslate.verified.includes(id)) {
+    store.speechTranslate.verified.push(id);
+  }
+  writeStore(store);
+  notifyVerifiedChanged();
+}
+
+export function revokeSpeechTranslateVerified(id: SpeechTranslateProfileId) {
+  const store = readStore();
+  store.speechTranslate.verified = store.speechTranslate.verified.filter((item) => item !== id);
+  if (store.audioSession.speechTranslateId === id) {
+    delete store.audioSession.speechTranslateId;
+  }
+  writeStore(store);
+  notifyVerifiedChanged();
+}
+
 export function getVerifiedProfileIds(kind: ProviderKind): string[] {
   const store = readStore();
-  return kind === "asr" ? [...store.asr.verified] : [...store.mt.verified];
+  if (kind === "asr") return [...store.asr.verified];
+  if (kind === "mt") return [...store.mt.verified];
+  return [...store.speechTranslate.verified];
 }
 
 export function getAsrProfile(id: AsrProfileId): AsrProfileConfig | undefined {
@@ -113,6 +150,12 @@ export function getMtProfile(id: MtProfileId): MtProfileConfig | undefined {
   return readStore().mt.profiles[id];
 }
 
+export function getSpeechTranslateProfile(
+  id: SpeechTranslateProfileId,
+): SpeechTranslateProfileConfig | undefined {
+  return readStore().speechTranslate.profiles[id];
+}
+
 export function saveAudioSession(selection: AudioSessionSelection) {
   const store = readStore();
   store.audioSession = { ...store.audioSession, ...selection };
@@ -120,5 +163,9 @@ export function saveAudioSession(selection: AudioSessionSelection) {
 }
 
 export function loadAudioSession(): AudioSessionSelection {
-  return readStore().audioSession;
+  const session = readStore().audioSession;
+  return {
+    mode: session.mode ?? "modular",
+    ...session,
+  };
 }

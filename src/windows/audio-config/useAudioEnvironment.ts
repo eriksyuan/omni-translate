@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -21,6 +22,7 @@ const DEFAULT_ENV: AudioEnvironmentStatus = {
 };
 
 export function useAudioEnvironment(source: AudioSourceKind) {
+  const { t } = useTranslation();
   const [env, setEnv] = useState<AudioEnvironmentStatus>(DEFAULT_ENV);
   const [loading, setLoading] = useState(true);
   const [requestingMic, setRequestingMic] = useState(false);
@@ -118,14 +120,20 @@ export function useAudioEnvironment(source: AudioSourceKind) {
 
   const micGranted = env.microphone === "granted";
   const micDenied = env.microphone === "denied" || env.microphone === "restricted";
+  const micNeedsGrant =
+    env.microphone === "notDetermined" || env.microphone === "unknown";
   const ready =
-    source === "blackhole" ? env.blackholeInstalled : micGranted;
+    source === "blackhole"
+      ? env.blackholeInstalled && micGranted
+      : micGranted;
 
   const micDeviceOptions = env.inputDevices
     .filter((device) => !device.isBlackhole)
     .map((device) => ({
       value: device.id,
-      label: device.isDefault ? `${device.name} (默认)` : device.name,
+      label: device.isDefault
+        ? t("audioConfig.device.default", { name: device.name })
+        : device.name,
     }));
 
   return {
@@ -134,6 +142,7 @@ export function useAudioEnvironment(source: AudioSourceKind) {
     ready,
     micGranted,
     micDenied,
+    micNeedsGrant,
     requestingMic,
     checkingBlackhole,
     micDeviceOptions,

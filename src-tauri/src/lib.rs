@@ -1,6 +1,7 @@
 mod audio;
 mod commands;
 mod i18n;
+mod logging;
 mod platform;
 mod providers;
 mod tray;
@@ -34,10 +35,23 @@ pub fn run() {
             commands::audio::get_audio_capture_status,
             commands::audio::start_audio_capture,
             commands::audio::stop_audio_capture,
+            commands::audio::start_audio_session,
+            commands::audio::stop_audio_session,
+            commands::audio::test_asr_connection_cmd,
+            commands::audio::test_mt_connection_cmd,
+            commands::audio::test_speech_translate_connection_cmd,
+            commands::logging::get_recent_logs,
+            commands::logging::get_log_file_path,
+            commands::logging::clear_recent_logs,
         ])
         .manage(audio::AudioCaptureManager::default())
+        .manage(audio::AudioTranslationPipeline::default())
         .on_window_event(|window, event| hide_window_on_close_request(window, event))
         .setup(|app| {
+            if let Err(err) = logging::init(app.handle()) {
+                eprintln!("failed to initialize logging: {err}");
+            }
+
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 

@@ -15,14 +15,16 @@ import { AsrSettingsSection } from "./AsrSettingsSection";
 import { GeneralSettingsSection } from "./GeneralSettingsSection";
 import { MtSettingsSection } from "./MtSettingsSection";
 import { OcrSettingsSection } from "./OcrSettingsSection";
+import { SpeechTranslateSettingsSection } from "./SpeechTranslateSettingsSection";
 
-const SECTIONS = ["general", "ocr", "asr", "mt"] as const;
+const SECTIONS = ["general", "ocr", "asr", "mt", "speechTranslate"] as const;
 
 const TAB_ICON = {
   general: GearIcon,
   ocr: OcrFrameIcon,
   asr: MicIcon,
   mt: TranslateIcon,
+  speechTranslate: TranslateIcon,
 } as const;
 
 function isPreferencesSection(value: string): value is PreferencesSection {
@@ -119,6 +121,9 @@ export function PreferencesWindow() {
         </TabsContent>
         <TabsContent value="mt" className="animate-fade">
           <MtSettingsSection />
+        </TabsContent>
+        <TabsContent value="speechTranslate" className="animate-fade">
+          <SpeechTranslateSettingsSection />
         </TabsContent>
       </main>
     </Tabs>

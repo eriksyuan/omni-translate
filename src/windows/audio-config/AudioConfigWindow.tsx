@@ -16,23 +16,39 @@ import { Badge } from "@/components/ui/badge";
 import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { SegmentedControl, SegmentedItem } from "@/components/ui/segmented-control";
 import { WindowShell } from "@/components/ui/window-shell";
 import {
-  AUDIO_CHUNK_EVENT,
+  AUDIO_ERROR_EVENT,
   AUDIO_STATE_EVENT,
-  startAudioCapture,
-  stopAudioCapture,
+  PIPELINE_ERROR_EVENT,
+  startAudioSession,
+  stopAudioSession,
   type AudioCaptureStatus,
   type AudioSourceKind,
+  type PipelineErrorPayload,
 } from "@/lib/audio";
 import { cn } from "@/lib/cn";
-import { saveAudioSession, type AsrProfileId, type MtProfileId } from "@/lib/settings";
+import { formatInvokeError } from "@/lib/invoke-error";
+import {
+  getAsrProfile,
+  getMtProfile,
+  getSpeechTranslateProfile,
+  saveAudioSession,
+  type AsrProfileId,
+  type AudioTranslationMode,
+  type MtProfileId,
+  type SpeechTranslateProfileId,
+} from "@/lib/settings";
+import { showWindow } from "@/lib/tauri";
+import { WINDOW_LABELS } from "@/lib/windows";
 import { useAudioEnvironment } from "@/windows/audio-config/useAudioEnvironment";
-import { useVerifiedProviders } from "@/windows/audio-config/useVerifiedProviders";
+import { useAudioSessionProviders } from "@/windows/audio-config/useAudioSessionProviders";
 
 export function AudioConfigWindow() {
   const { t } = useTranslation();
   const [source, setSource] = useState<AudioSourceKind>("blackhole");
+  const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,8 +58,10 @@ export function AudioConfigWindow() {
     ready,
     micGranted,
     micDenied,
+    micNeedsGrant,
     requestingMic,
     checkingBlackhole,
+    micDeviceOptions,
     refresh,
     requestMic,
     openBlackholeGuide,
@@ -51,26 +69,44 @@ export function AudioConfigWindow() {
   } = useAudioEnvironment(source);
 
   const {
+    mode,
+    setMode,
     asrOptions,
     mtOptions,
+    speechOptions,
     selectedAsrId,
     selectedMtId,
+    selectedSpeechId,
     setSelectedAsrId,
     setSelectedMtId,
+    setSelectedSpeechId,
     hasVerifiedAsr,
     hasVerifiedMt,
-  } = useVerifiedProviders();
-
-  const canStart = ready && hasVerifiedAsr && hasVerifiedMt && !!selectedAsrId && !!selectedMtId;
+    hasVerifiedSpeech,
+    canStart,
+  } = useAudioSessionProviders();
 
   useEffect(() => {
     saveAudioSession({
+      mode,
       asrId: selectedAsrId,
       mtId: selectedMtId,
+      speechTranslateId: selectedSpeechId,
     });
-  }, [selectedAsrId, selectedMtId]);
+  }, [mode, selectedAsrId, selectedMtId, selectedSpeechId]);
+
+  useEffect(() => {
+    if (source !== "mic" || micDeviceId) return;
+    const defaultDevice =
+      env.inputDevices.find((device) => !device.isBlackhole && device.isDefault) ??
+      env.inputDevices.find((device) => !device.isBlackhole);
+    if (defaultDevice) {
+      setMicDeviceId(defaultDevice.id);
+    }
+  }, [env.inputDevices, micDeviceId, source]);
 
   const defaultMicDevice =
+    env.inputDevices.find((device) => device.id === micDeviceId) ??
     env.inputDevices.find((device) => !device.isBlackhole && device.isDefault) ??
     env.inputDevices.find((device) => !device.isBlackhole);
 
@@ -88,24 +124,92 @@ export function AudioConfigWindow() {
 
     try {
       if (listening) {
-        const status = await stopAudioCapture();
+        const status = await stopAudioSession();
         setListening(status.active);
         return;
       }
 
-      const status = await startAudioCapture(source);
+      if (mode === "modular") {
+        if (!selectedAsrId || !selectedMtId) {
+          setError(t("audioConfig.error.noAsrOrMt"));
+          return;
+        }
+
+        const asrConfig = getAsrProfile(selectedAsrId);
+        const mtConfig = getMtProfile(selectedMtId);
+
+        if (!asrConfig || !mtConfig) {
+          setError(t("audioConfig.error.noAsrOrMt"));
+          return;
+        }
+
+        const status = await startAudioSession({
+          source,
+          deviceId: source === "mic" ? micDeviceId : null,
+          sessionConfig: { mode: "modular", asrConfig, mtConfig },
+        });
+        setListening(status.active);
+        if (status.active) {
+          try {
+            await showWindow(WINDOW_LABELS.SUBTITLE);
+          } catch (windowError) {
+            await stopAudioSession().catch(() => undefined);
+            setListening(false);
+            setError(formatInvokeError(windowError));
+            return;
+          }
+        }
+        return;
+      }
+
+      if (!selectedSpeechId) {
+        setError(t("audioConfig.error.noSpeechTranslate"));
+        return;
+      }
+
+      const speechConfig = getSpeechTranslateProfile(selectedSpeechId);
+      if (!speechConfig) {
+        setError(t("audioConfig.error.noSpeechTranslate"));
+        return;
+      }
+
+      const status = await startAudioSession({
+        source,
+        deviceId: source === "mic" ? micDeviceId : null,
+        sessionConfig: { mode: "integrated", speechConfig },
+      });
       setListening(status.active);
-    } catch {
-      setError(t("audioConfig.error.captureFailed"));
+      if (status.active) {
+        try {
+          await showWindow(WINDOW_LABELS.SUBTITLE);
+        } catch (windowError) {
+          await stopAudioSession().catch(() => undefined);
+          setListening(false);
+          setError(formatInvokeError(windowError));
+          return;
+        }
+      }
+    } catch (startError) {
+      setError(formatInvokeError(startError));
       setListening(false);
     }
-  }, [listening, source, t]);
+  }, [
+    listening,
+    micDeviceId,
+    mode,
+    selectedAsrId,
+    selectedMtId,
+    selectedSpeechId,
+    source,
+    t,
+  ]);
 
   useEffect(() => {
     if (!isTauri()) return;
 
     let unlistenState: (() => void) | undefined;
-    let unlistenChunk: (() => void) | undefined;
+    let unlistenPipelineError: (() => void) | undefined;
+    let unlistenAudioError: (() => void) | undefined;
 
     void syncCaptureStatus().then((status) => {
       setListening(status.active);
@@ -123,18 +227,38 @@ export function AudioConfigWindow() {
       unlistenState = unlisten;
     });
 
-    void listen(AUDIO_CHUNK_EVENT, () => {
-      // Reserved for ASR pipeline integration.
+    void listen<PipelineErrorPayload>(PIPELINE_ERROR_EVENT, (event) => {
+      setError(event.payload.message);
+      if (event.payload.code === "pipeline_stopped") {
+        void stopAudioSession()
+          .then((status) => setListening(status.active))
+          .catch(() => setListening(false));
+      }
     }).then((unlisten) => {
-      unlistenChunk = unlisten;
+      unlistenPipelineError = unlisten;
+    });
+
+    void listen<string>(AUDIO_ERROR_EVENT, (event) => {
+      setError(event.payload);
+      void stopAudioSession()
+        .then((status) => setListening(status.active))
+        .catch(() => setListening(false));
+    }).then((unlisten) => {
+      unlistenAudioError = unlisten;
     });
 
     return () => {
       unlistenState?.();
-      unlistenChunk?.();
-      void stopAudioCapture().catch(() => undefined);
+      unlistenPipelineError?.();
+      unlistenAudioError?.();
+      void stopAudioSession().catch(() => undefined);
     };
   }, [syncCaptureStatus]);
+
+  const handleModeChange = (next: string) => {
+    setMode(next as AudioTranslationMode);
+    setError(null);
+  };
 
   return (
     <WindowShell>
@@ -157,7 +281,7 @@ export function AudioConfigWindow() {
             <div className="flex-1">
               <b className="font-600">{t("audioConfig.banner.title")}</b>
               <div className="flex flex-col gap-[9px] mt-2.5">
-                {source === "mic" ? (
+                {!micGranted ? (
                   <div className={cn("flex items-center gap-2.5 text-[12.5px]", micGranted && "text-fg-2")}>
                     <span
                       className={cn(
@@ -167,7 +291,11 @@ export function AudioConfigWindow() {
                     >
                       {micGranted ? <CircleCheckIcon size={15} /> : <MicIcon size={15} />}
                     </span>
-                    <span className="flex-1">{t("audioConfig.dep.mic")}</span>
+                    <span className="flex-1">
+                      {source === "blackhole"
+                        ? t("audioConfig.dep.micForBlackhole")
+                        : t("audioConfig.dep.mic")}
+                    </span>
                     {micGranted ? (
                       <Badge variant="ok">
                         <CheckIcon size={11} />
@@ -186,8 +314,12 @@ export function AudioConfigWindow() {
                   </div>
                 ) : null}
 
-                {micDenied && source === "mic" ? (
+                {micDenied ? (
                   <p className="text-[11.5px] leading-[1.5] text-warn-fg pl-7">{t("audioConfig.dep.micDenied")}</p>
+                ) : null}
+
+                {source === "blackhole" && micNeedsGrant && !micDenied ? (
+                  <p className="text-[11.5px] leading-[1.5] text-fg-3 pl-7">{t("audioConfig.dep.micForBlackholeHint")}</p>
                 ) : null}
 
                 {source === "blackhole" ? (
@@ -277,44 +409,92 @@ export function AudioConfigWindow() {
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-[7px]">
-          <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.asr")}</span>
-          <ProviderSelect
-            kind="asr"
-            ariaLabel={t("audioConfig.field.asr")}
-            value={selectedAsrId}
-            onValueChange={(value) => setSelectedAsrId(value as AsrProfileId)}
-            disabled={listening}
-            options={asrOptions}
-            emptyPlaceholder={t("audioConfig.field.noVerifiedAsr")}
-          />
-          {!hasVerifiedAsr ? (
-            <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.noVerifiedAsr")}</p>
-          ) : null}
-        </div>
+        {source === "mic" && micDeviceOptions.length > 1 ? (
+          <div className="flex flex-col gap-[7px]">
+            <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.micDevice")}</span>
+            <Select
+              ariaLabel={t("audioConfig.field.micDevice")}
+              options={micDeviceOptions}
+              value={micDeviceId ?? micDeviceOptions[0]?.value ?? ""}
+              onValueChange={setMicDeviceId}
+              disabled={listening}
+            />
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-[7px]">
-          <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.mt")}</span>
-          <ProviderSelect
-            kind="mt"
-            ariaLabel={t("audioConfig.field.mt")}
-            value={selectedMtId}
-            onValueChange={(value) => setSelectedMtId(value as MtProfileId)}
-            disabled={listening}
-            options={mtOptions}
-            emptyPlaceholder={t("audioConfig.field.noVerifiedMt")}
-          />
-          {!hasVerifiedMt ? (
-            <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.noVerifiedMt")}</p>
-          ) : null}
+          <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.mode")}</span>
+          <SegmentedControl type="single" value={mode} onValueChange={handleModeChange} disabled={listening}>
+            <SegmentedItem value="modular">{t("audioConfig.mode.modular")}</SegmentedItem>
+            <SegmentedItem value="integrated">{t("audioConfig.mode.integrated")}</SegmentedItem>
+          </SegmentedControl>
+          <p className="text-[11.5px] text-fg-3">
+            {mode === "modular" ? t("audioConfig.mode.modularHint") : t("audioConfig.mode.integratedHint")}
+          </p>
         </div>
+
+        {mode === "modular" ? (
+          <>
+            <div className="flex flex-col gap-[7px]">
+              <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.asr")}</span>
+              <ProviderSelect
+                kind="asr"
+                ariaLabel={t("audioConfig.field.asr")}
+                value={selectedAsrId}
+                onValueChange={(value) => setSelectedAsrId(value as AsrProfileId)}
+                disabled={listening}
+                options={asrOptions}
+                emptyPlaceholder={t("audioConfig.field.noVerifiedAsr")}
+              />
+              {!hasVerifiedAsr ? (
+                <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.noVerifiedAsr")}</p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-[7px]">
+              <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.mt")}</span>
+              <ProviderSelect
+                kind="mt"
+                ariaLabel={t("audioConfig.field.mt")}
+                value={selectedMtId}
+                onValueChange={(value) => setSelectedMtId(value as MtProfileId)}
+                disabled={listening}
+                options={mtOptions}
+                emptyPlaceholder={t("audioConfig.field.noVerifiedMt")}
+              />
+              {!hasVerifiedMt ? (
+                <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.noVerifiedMt")}</p>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col gap-[7px]">
+            <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.speechTranslate")}</span>
+            <ProviderSelect
+              kind="speechTranslate"
+              ariaLabel={t("audioConfig.field.speechTranslate")}
+              value={selectedSpeechId}
+              onValueChange={(value) => setSelectedSpeechId(value as SpeechTranslateProfileId)}
+              disabled={listening}
+              options={speechOptions}
+              emptyPlaceholder={t("audioConfig.field.noVerifiedSpeechTranslate")}
+            />
+            {!hasVerifiedSpeech ? (
+              <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.noVerifiedSpeechTranslate")}</p>
+            ) : null}
+          </div>
+        )}
 
         {error ? (
           <p className="text-[12px] text-warn-fg leading-[1.5]">{error}</p>
         ) : null}
 
-        {!canStart && ready && (!hasVerifiedAsr || !hasVerifiedMt) ? (
+        {!canStart && ready && mode === "modular" && (!hasVerifiedAsr || !hasVerifiedMt) ? (
           <p className="text-[12px] text-fg-3 leading-[1.5]">{t("audioConfig.error.noAsrOrMt")}</p>
+        ) : null}
+
+        {!canStart && ready && mode === "integrated" && !hasVerifiedSpeech ? (
+          <p className="text-[12px] text-fg-3 leading-[1.5]">{t("audioConfig.error.noSpeechTranslate")}</p>
         ) : null}
 
         <Button
@@ -329,7 +509,7 @@ export function AudioConfigWindow() {
           {listening ? (
             <>
               <SpinnerIcon size={15} />
-              {source === "mic" ? t("audioConfig.start.listeningMic") : t("audioConfig.start.listening")}
+              {t("audioConfig.start.stop")}
             </>
           ) : (
             <>
