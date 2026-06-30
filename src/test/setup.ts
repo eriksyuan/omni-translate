@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import "@/i18n";
 import { vi } from "vitest";
 
 vi.mock("@tauri-apps/api/window", () => {
@@ -18,4 +19,5 @@ vi.mock("@tauri-apps/api/window", () => {
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
+  isTauri: () => false,
 }));

@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(rootDir, "./src"),
+      "@locales": path.resolve(rootDir, "./locales"),
     },
   },
   clearScreen: false,

@@ -1,0 +1,9 @@
+{
+  "defaultLocale": "zh-CN",
+  "fallbackLocale": "en",
+  "supportedLocales": ["zh-CN", "en"],
+  "persist": {
+    "rustFilename": "locale",
+    "webStorageKey": "omni-translate.locale"
+  }
+}

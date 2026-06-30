@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { AudioConfigWindow } from "@/windows/audio-config/AudioConfigWindow";
 import { OcrPermissionWindow } from "@/windows/ocr-permission/OcrPermissionWindow";
@@ -16,13 +17,14 @@ const VIEWS: Record<WindowLabel, () => ReactElement> = {
 };
 
 export function WindowRoot() {
+  const { t } = useTranslation();
   const label = getCurrentWindow().label as WindowLabel;
   const View = VIEWS[label];
 
   if (!View) {
     return (
       <main style={{ padding: 24 }}>
-        <h1>Unknown window</h1>
+        <h1>{t("windowRoot.unknownWindow")}</h1>
         <p>{label}</p>
       </main>
     );

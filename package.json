@@ -4,10 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "pnpm typecheck && vite build",
+    "dev": "pnpm i18n:prepare && vite",
+    "build": "pnpm i18n:prepare && pnpm typecheck && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "i18n:validate": "node scripts/i18n/validate.mjs",
+    "i18n:sync": "node scripts/i18n/sync.mjs",
+    "i18n:prepare": "pnpm i18n:validate && pnpm i18n:sync",
     "typecheck": "tsc --noEmit -p tsconfig.json --pretty && tsc --noEmit -p tsconfig.node.json --pretty",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -20,13 +23,15 @@
     "rust:fmt:check": "cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check",
     "rust:check": "cargo check --manifest-path src-tauri/Cargo.toml",
     "rust:clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm rust:fmt:check && pnpm rust:check"
+    "check": "pnpm i18n:prepare && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm rust:fmt:check && pnpm rust:check"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
+    "i18next": "^26.3.3",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-i18next": "^17.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

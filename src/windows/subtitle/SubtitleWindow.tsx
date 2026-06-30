@@ -1,11 +1,14 @@
+import { Trans, useTranslation } from "react-i18next";
 import styles from "./subtitle.module.css";
 
 export function SubtitleWindow() {
+  const { t } = useTranslation();
+
   return (
     <main className={styles.wrap}>
-      <p className={styles.orig}>Welcome to the future of AI translation.</p>
+      <p className={styles.orig}>{t("subtitle.original")}</p>
       <p className={styles.trans}>
-        欢迎来到 <span className={styles.hl}>AI 翻译</span>的未来。
+        <Trans i18nKey="subtitle.translation" components={{ hl: <span className={styles.hl} /> }} />
       </p>
     </main>
   );

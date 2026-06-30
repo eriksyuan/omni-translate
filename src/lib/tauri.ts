@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { Locale } from "@/i18n";
 
 export interface AppInfo {
   name: string;
@@ -12,6 +13,14 @@ export function getAppInfo() {
 
 export function getPlatform() {
   return invoke<string>("get_platform");
+}
+
+export function getLocale() {
+  return invoke<Locale>("get_locale");
+}
+
+export function setLocale(locale: Locale) {
+  return invoke<void>("set_locale", { locale });
 }
 
 export function showWindow(label: string) {

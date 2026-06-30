@@ -1,0 +1,45 @@
+{
+  "tray": {
+    "audioConfig": "Live Audio Translation…",
+    "ocrPermission": "Screen Region OCR Translation",
+    "preferences": "Preferences…",
+    "quit": "Quit OmniTranslate",
+    "tooltip": "OmniTranslate"
+  },
+  "windowRoot": {
+    "unknownWindow": "Unknown window"
+  },
+  "preferences": {
+    "title": "Preferences",
+    "nav": {
+      "general": "General"
+    }
+  },
+  "generalSettings": {
+    "title": "General Settings",
+    "language": {
+      "label": "Language",
+      "option": {
+        "zh-CN": "简体中文",
+        "en": "English"
+      }
+    }
+  },
+  "audioConfig": {
+    "title": "Live Audio Translation",
+    "description": "Dynamic dependency detection, audio input source, and ASR / translation engine selection (UI scaffold).",
+    "placeholder": "Phase 2: BlackHole detection and dual-state A/B UI."
+  },
+  "ocrPermission": {
+    "title": "Screen Recording Permission Required",
+    "description": "Just-in-Time permission guidance and system settings shortcut (UI scaffold).",
+    "placeholder": "Phase 2: Authorization detection and open system settings."
+  },
+  "ocrOverlay": {
+    "hint": "Press and drag to select a region (UI scaffold)"
+  },
+  "subtitle": {
+    "original": "Welcome to the future of AI translation.",
+    "translation": "Welcome to the future of <hl>AI translation</hl>."
+  }
+}

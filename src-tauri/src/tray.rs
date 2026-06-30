@@ -1,21 +1,25 @@
 use crate::commands;
+use crate::i18n;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    App,
+    App, AppHandle,
 };
 
-pub fn setup_tray(app: &App) -> tauri::Result<()> {
-    let icon = app
-        .default_window_icon()
-        .ok_or_else(|| tauri::Error::Io(std::io::Error::other("missing default window icon")))?
-        .clone();
+pub const TRAY_ID: &str = "main-tray";
 
-    let audio = MenuItem::with_id(app, "audio_config", "音频实时翻译…", true, None::<&str>)?;
+pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    let audio = MenuItem::with_id(
+        app,
+        "audio_config",
+        &i18n::t("tray.audioConfig"),
+        true,
+        None::<&str>,
+    )?;
     let ocr = MenuItem::with_id(
         app,
         "ocr_permission",
-        "屏幕区域 OCR 翻译",
+        &i18n::t("tray.ocrPermission"),
         true,
         None::<&str>,
     )?;
@@ -23,7 +27,7 @@ pub fn setup_tray(app: &App) -> tauri::Result<()> {
     let prefs = MenuItem::with_id(
         app,
         "preferences",
-        "服务设置…",
+        &i18n::t("tray.preferences"),
         true,
         Some("Cmd+,"),
     )?;
@@ -31,18 +35,28 @@ pub fn setup_tray(app: &App) -> tauri::Result<()> {
     let quit = MenuItem::with_id(
         app,
         "quit",
-        "退出 OmniTranslate",
+        &i18n::t("tray.quit"),
         true,
         Some("Cmd+Q"),
     )?;
-    let menu = Menu::with_items(
+
+    Menu::with_items(
         app,
         &[&audio, &ocr, &sep1, &prefs, &sep2, &quit],
-    )?;
+    )
+}
 
-    TrayIconBuilder::new()
+pub fn setup_tray(app: &App) -> tauri::Result<()> {
+    let icon = app
+        .default_window_icon()
+        .ok_or_else(|| tauri::Error::Io(std::io::Error::other("missing default window icon")))?
+        .clone();
+
+    let menu = build_menu(app.handle())?;
+
+    TrayIconBuilder::with_id(TRAY_ID)
         .icon(icon)
-        .tooltip("OmniTranslate")
+        .tooltip(i18n::t("tray.tooltip"))
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "audio_config" => {
@@ -60,4 +74,15 @@ pub fn setup_tray(app: &App) -> tauri::Result<()> {
         .build(app)?;
 
     Ok(())
+}
+
+pub fn refresh_menu(app: &AppHandle) -> Result<(), String> {
+    let tray = app
+        .tray_by_id(TRAY_ID)
+        .ok_or_else(|| format!("tray not found: {TRAY_ID}"))?;
+    let menu = build_menu(app).map_err(|e| e.to_string())?;
+
+    tray.set_menu(Some(menu)).map_err(|e| e.to_string())?;
+    tray.set_tooltip(Some(&i18n::t("tray.tooltip")))
+        .map_err(|e| e.to_string())
 }
