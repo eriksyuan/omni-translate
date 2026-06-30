@@ -238,6 +238,8 @@ fn run_modular_worker(
                                 let payload = SubtitleUpdatePayload {
                                     original: text,
                                     translation: translation.clone(),
+                                    sentence_id: None,
+                                    sentence_end: true,
                                     tokens: build_translation_tokens(&translation),
                                 };
                                 let _ = app.emit(EVENT_SUBTITLE_UPDATE, payload);
@@ -250,6 +252,8 @@ fn run_modular_worker(
                                     let payload = SubtitleUpdatePayload {
                                         original: text.clone(),
                                         translation: translation.clone(),
+                                        sentence_id: None,
+                                        sentence_end: true,
                                         tokens: build_translation_tokens(&translation),
                                     };
                                     let _ = app.emit(EVENT_SUBTITLE_UPDATE, payload);

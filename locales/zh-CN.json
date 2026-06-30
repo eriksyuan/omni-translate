@@ -97,6 +97,9 @@
       "asr": "ASR 引擎",
       "mt": "翻译引擎",
       "speechTranslate": "语音翻译引擎",
+      "speechSource": "源语言",
+      "speechSourceHelp": "与采集音频语言一致；不确定时可选「自动识别（中英混合）」。",
+      "speechTarget": "目标语言",
       "noVerifiedAsr": "请先在偏好设置中配置并测试 ASR",
       "noVerifiedMt": "请先在偏好设置中配置并测试翻译引擎",
       "noVerifiedSpeechTranslate": "请先在偏好设置中配置并测试语音翻译"
@@ -137,6 +140,29 @@
       "captureFailed": "无法启动音频捕捉，请检查输入源与系统权限。",
       "noAsrOrMt": "请先在偏好设置中完成 ASR 与翻译引擎的测试连接。",
       "noSpeechTranslate": "请先在偏好设置中完成语音翻译的连接测试后再开始监听。"
+    },
+    "language": {
+      "autoDetect": "自动识别（中英混合）",
+      "source": {
+        "zh": "中文",
+        "en": "英语",
+        "zh_en": "中英混合",
+        "ja": "日语",
+        "ko": "韩语",
+        "yue": "粤语",
+        "id": "印尼语",
+        "th": "泰语"
+      },
+      "target": {
+        "zh": "中文",
+        "en": "英语",
+        "zh_en": "自动双向（中英）",
+        "ja": "日语",
+        "ko": "韩语",
+        "yue": "粤语",
+        "id": "印尼语",
+        "th": "泰语"
+      }
     },
     "okNote": "环境已就绪 — 面板已切换至就绪状态"
   },
@@ -312,23 +338,32 @@
       "help": "用于请求签名的 SecretKey。",
       "placeholder": "****"
     },
-    "source": {
-      "label": "源语言",
-      "help": "采集音频的语言。",
-      "en": "英语",
-      "zh": "中文",
-      "zhEn": "中英混合"
-    },
-    "target": {
-      "label": "目标语言",
-      "help": "v1 固定为简体中文。",
-      "zh": "简体中文"
-    },
     "transModel": {
       "label": "翻译模型",
-      "help": "腾讯混元翻译模型档位。",
-      "lite": "混元轻量版（默认）",
-      "standard": "混元标准版"
+      "help": "标准版质量更高；轻量版延迟更低。语向请在监听页选择。",
+      "lite": "混元轻量版",
+      "standard": "混元标准版（默认）"
+    },
+    "advanced": {
+      "show": "显示高级选项",
+      "hide": "隐藏高级选项"
+    },
+    "hotwordList": {
+      "label": "临时热词表",
+      "help": "格式：词语|权重，多个用英文逗号分隔，如「腾讯云|10,GPU|5」。",
+      "placeholder": "OmniTranslate|10"
+    },
+    "noiseThreshold": {
+      "label": "噪音阈值",
+      "help": "范围 -2 到 2；环境噪声大时可适当调高。"
+    },
+    "domain": {
+      "label": "领域",
+      "help": "可选领域模型，提升专有场景识别效果。",
+      "none": "不指定",
+      "tech": "科技",
+      "movie": "电影",
+      "song": "歌曲"
     },
     "action": {
       "test": "测试连接",

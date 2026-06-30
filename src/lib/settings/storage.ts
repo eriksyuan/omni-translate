@@ -1,4 +1,9 @@
 import { notifyVerifiedProvidersChanged } from "@/lib/preferences-navigation";
+import {
+  defaultTencentSpeechTranslateConfig,
+  resolveLanguagePair,
+  TENCENT_SPEECH_TRANSLATE_PROFILE_ID,
+} from "@/lib/settings/speech-translate";
 import type {
   AsrProfileConfig,
   AsrProfileId,
@@ -9,6 +14,7 @@ import type {
   SettingsStore,
   SpeechTranslateProfileConfig,
   SpeechTranslateProfileId,
+  TencentSpeechTranslateConfig,
 } from "@/lib/settings/types";
 
 const STORAGE_KEY = "omnitranslate:settings:v1";
@@ -20,12 +26,85 @@ const EMPTY_STORE: SettingsStore = {
   audioSession: {},
 };
 
+function stripLegacyLanguageFields(
+  raw: Record<string, unknown>,
+): { config: TencentSpeechTranslateConfig; legacySource?: string; legacyTarget?: string } {
+  const base = defaultTencentSpeechTranslateConfig();
+  const legacySource = typeof raw.source === "string" ? raw.source : undefined;
+  const legacyTarget = typeof raw.target === "string" ? raw.target : undefined;
+
+  const config: TencentSpeechTranslateConfig = {
+    kind: "speechTranslate",
+    provider: "tencentRealtime",
+    appId: typeof raw.appId === "string" ? raw.appId : base.appId,
+    secretId: typeof raw.secretId === "string" ? raw.secretId : base.secretId,
+    secretKey: typeof raw.secretKey === "string" ? raw.secretKey : base.secretKey,
+    transModel:
+      raw.transModel === "hunyuan-translation-lite" ||
+      raw.transModel === "hunyuan-translation"
+        ? raw.transModel
+        : base.transModel,
+    hotwordList: typeof raw.hotwordList === "string" ? raw.hotwordList : base.hotwordList,
+    noiseThreshold:
+      typeof raw.noiseThreshold === "number" ? raw.noiseThreshold : base.noiseThreshold,
+    domain:
+      raw.domain === 1 || raw.domain === 2 || raw.domain === 3 ? raw.domain : undefined,
+  };
+
+  return { config, legacySource, legacyTarget };
+}
+
+function migrateStore(store: SettingsStore): SettingsStore {
+  let migrated = false;
+  const next: SettingsStore = structuredClone(store);
+  const profileId = TENCENT_SPEECH_TRANSLATE_PROFILE_ID;
+  const rawProfile = next.speechTranslate.profiles[profileId] as
+    | Record<string, unknown>
+    | undefined;
+
+  if (rawProfile) {
+    const { config, legacySource, legacyTarget } = stripLegacyLanguageFields(rawProfile);
+    next.speechTranslate.profiles[profileId] = config;
+
+    if (legacySource || legacyTarget) {
+      const pair = resolveLanguagePair(legacySource, legacyTarget);
+      if (!next.audioSession.speechSource) {
+        next.audioSession.speechSource = pair.source;
+        migrated = true;
+      }
+      if (!next.audioSession.speechTarget) {
+        next.audioSession.speechTarget = pair.target;
+        migrated = true;
+      }
+    }
+  }
+
+  const sessionPair = resolveLanguagePair(
+    next.audioSession.speechSource,
+    next.audioSession.speechTarget,
+  );
+  if (
+    next.audioSession.speechSource !== sessionPair.source ||
+    next.audioSession.speechTarget !== sessionPair.target
+  ) {
+    next.audioSession.speechSource = sessionPair.source;
+    next.audioSession.speechTarget = sessionPair.target;
+    migrated = true;
+  }
+
+  if (migrated) {
+    writeStore(next);
+  }
+
+  return next;
+}
+
 function readStore(): SettingsStore {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(EMPTY_STORE);
     const parsed = JSON.parse(raw) as SettingsStore;
-    return {
+    const store: SettingsStore = {
       asr: {
         profiles: parsed.asr?.profiles ?? {},
         verified: parsed.asr?.verified ?? [],
@@ -40,6 +119,7 @@ function readStore(): SettingsStore {
       },
       audioSession: parsed.audioSession ?? {},
     };
+    return migrateStore(store);
   } catch {
     return structuredClone(EMPTY_STORE);
   }
@@ -158,14 +238,23 @@ export function getSpeechTranslateProfile(
 
 export function saveAudioSession(selection: AudioSessionSelection) {
   const store = readStore();
-  store.audioSession = { ...store.audioSession, ...selection };
+  const pair = resolveLanguagePair(selection.speechSource, selection.speechTarget);
+  store.audioSession = {
+    ...store.audioSession,
+    ...selection,
+    speechSource: pair.source,
+    speechTarget: pair.target,
+  };
   writeStore(store);
 }
 
 export function loadAudioSession(): AudioSessionSelection {
   const session = readStore().audioSession;
+  const pair = resolveLanguagePair(session.speechSource, session.speechTarget);
   return {
     mode: session.mode ?? "modular",
     ...session,
+    speechSource: pair.source,
+    speechTarget: pair.target,
   };
 }

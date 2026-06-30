@@ -94,16 +94,24 @@ pub fn stop_audio_session(
 }
 
 #[tauri::command]
-pub fn test_asr_connection_cmd(asr_config: AsrConfig) -> Result<(), String> {
-    test_asr_connection(&asr_config)
+pub async fn test_asr_connection_cmd(asr_config: AsrConfig) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || test_asr_connection(&asr_config))
+        .await
+        .map_err(|e| format!("asr test task failed: {e}"))?
 }
 
 #[tauri::command]
-pub fn test_mt_connection_cmd(mt_config: MtConfig) -> Result<String, String> {
-    test_mt_connection(&mt_config)
+pub async fn test_mt_connection_cmd(mt_config: MtConfig) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || test_mt_connection(&mt_config))
+        .await
+        .map_err(|e| format!("mt test task failed: {e}"))?
 }
 
 #[tauri::command]
-pub fn test_speech_translate_connection_cmd(speech_config: SpeechTranslateConfig) -> Result<(), String> {
-    test_speech_translate_connection(&speech_config)
+pub async fn test_speech_translate_connection_cmd(
+    speech_config: SpeechTranslateConfig,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || test_speech_translate_connection(&speech_config))
+        .await
+        .map_err(|e| format!("speech translate test task failed: {e}"))?
 }

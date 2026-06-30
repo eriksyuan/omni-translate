@@ -18,6 +18,7 @@ export {
 export type {
   PipelineErrorPayload,
   PipelineStatePayload,
+  SubtitleSentence,
   SubtitleUpdatePayload,
 } from "@/lib/audio/pipeline-types";
 export type {
@@ -29,6 +30,7 @@ export type {
   MicrophonePermission,
 } from "@/lib/audio/types";
 export {
+  buildIntegratedSpeechRustConfig,
   startAudioSession,
   stopAudioSession,
   testAsrConnection,

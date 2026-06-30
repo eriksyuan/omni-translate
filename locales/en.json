@@ -97,6 +97,9 @@
       "asr": "ASR Engine",
       "mt": "Translation Engine",
       "speechTranslate": "Speech translation engine",
+      "speechSource": "Source language",
+      "speechSourceHelp": "Match the spoken audio; choose auto-detect for mixed Chinese/English.",
+      "speechTarget": "Target language",
       "noVerifiedAsr": "Configure and test ASR in Preferences first",
       "noVerifiedMt": "Configure and test a translation engine in Preferences first",
       "noVerifiedSpeechTranslate": "Configure and test speech translation in Preferences first"
@@ -137,6 +140,29 @@
       "captureFailed": "Could not start audio capture. Check the input source and system permissions.",
       "noAsrOrMt": "Complete ASR and translation connection tests in Preferences before listening.",
       "noSpeechTranslate": "Complete speech translation connection test in Preferences before listening."
+    },
+    "language": {
+      "autoDetect": "Auto-detect (Chinese + English)",
+      "source": {
+        "zh": "Chinese",
+        "en": "English",
+        "zh_en": "Chinese + English mixed",
+        "ja": "Japanese",
+        "ko": "Korean",
+        "yue": "Cantonese",
+        "id": "Indonesian",
+        "th": "Thai"
+      },
+      "target": {
+        "zh": "Chinese",
+        "en": "English",
+        "zh_en": "Auto bidirectional (ZH/EN)",
+        "ja": "Japanese",
+        "ko": "Korean",
+        "yue": "Cantonese",
+        "id": "Indonesian",
+        "th": "Thai"
+      }
     },
     "okNote": "Environment ready — panel switched to ready state"
   },
@@ -312,23 +338,32 @@
       "help": "API key SecretKey used for request signing.",
       "placeholder": "****"
     },
-    "source": {
-      "label": "Source language",
-      "help": "Language of the audio being captured.",
-      "en": "English",
-      "zh": "Chinese",
-      "zhEn": "Chinese + English mixed"
-    },
-    "target": {
-      "label": "Target language",
-      "help": "v1 fixed to Simplified Chinese.",
-      "zh": "Chinese (Simplified)"
-    },
     "transModel": {
       "label": "Translation model",
-      "help": "Tencent Hunyuan translation model tier.",
-      "lite": "Hunyuan Lite (default)",
-      "standard": "Hunyuan Standard"
+      "help": "Standard offers higher quality; Lite is lower latency. Choose language pair on the listen page.",
+      "lite": "Hunyuan Lite",
+      "standard": "Hunyuan Standard (default)"
+    },
+    "advanced": {
+      "show": "Show advanced options",
+      "hide": "Hide advanced options"
+    },
+    "hotwordList": {
+      "label": "Hotword list",
+      "help": "Format: word|weight, comma-separated, e.g. Cloud|10,GPU|5.",
+      "placeholder": "OmniTranslate|10"
+    },
+    "noiseThreshold": {
+      "label": "Noise threshold",
+      "help": "Range -2 to 2; increase in noisy environments."
+    },
+    "domain": {
+      "label": "Domain",
+      "help": "Optional domain model for specialized content.",
+      "none": "None",
+      "tech": "Technology",
+      "movie": "Film",
+      "song": "Music"
     },
     "action": {
       "test": "Test connection",

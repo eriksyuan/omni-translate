@@ -21,6 +21,7 @@ import { WindowShell } from "@/components/ui/window-shell";
 import {
   AUDIO_ERROR_EVENT,
   AUDIO_STATE_EVENT,
+  buildIntegratedSpeechRustConfig,
   PIPELINE_ERROR_EVENT,
   startAudioSession,
   stopAudioSession,
@@ -31,14 +32,20 @@ import {
 import { cn } from "@/lib/cn";
 import { formatInvokeError } from "@/lib/invoke-error";
 import {
+  AUTO_DETECT_LANGUAGE_PAIR,
   getAsrProfile,
   getMtProfile,
   getSpeechTranslateProfile,
+  getValidTargets,
+  normalizeLanguagePair,
   saveAudioSession,
+  TENCENT_SPEECH_SOURCE_CODES,
   type AsrProfileId,
   type AudioTranslationMode,
   type MtProfileId,
   type SpeechTranslateProfileId,
+  type TencentSpeechSource,
+  type TencentSpeechTarget,
 } from "@/lib/settings";
 import { showWindow } from "@/lib/tauri";
 import { WINDOW_LABELS } from "@/lib/windows";
@@ -77,9 +84,13 @@ export function AudioConfigWindow() {
     selectedAsrId,
     selectedMtId,
     selectedSpeechId,
+    speechSource,
+    speechTarget,
     setSelectedAsrId,
     setSelectedMtId,
     setSelectedSpeechId,
+    setSpeechSource,
+    setSpeechTarget,
     hasVerifiedAsr,
     hasVerifiedMt,
     hasVerifiedSpeech,
@@ -92,8 +103,10 @@ export function AudioConfigWindow() {
       asrId: selectedAsrId,
       mtId: selectedMtId,
       speechTranslateId: selectedSpeechId,
+      speechSource,
+      speechTarget,
     });
-  }, [mode, selectedAsrId, selectedMtId, selectedSpeechId]);
+  }, [mode, selectedAsrId, selectedMtId, selectedSpeechId, speechSource, speechTarget]);
 
   useEffect(() => {
     if (source !== "mic" || micDeviceId) return;
@@ -167,8 +180,8 @@ export function AudioConfigWindow() {
         return;
       }
 
-      const speechConfig = getSpeechTranslateProfile(selectedSpeechId);
-      if (!speechConfig) {
+      const speechProfile = getSpeechTranslateProfile(selectedSpeechId);
+      if (!speechProfile) {
         setError(t("audioConfig.error.noSpeechTranslate"));
         return;
       }
@@ -176,7 +189,13 @@ export function AudioConfigWindow() {
       const status = await startAudioSession({
         source,
         deviceId: source === "mic" ? micDeviceId : null,
-        sessionConfig: { mode: "integrated", speechConfig },
+        sessionConfig: {
+          mode: "integrated",
+          speechConfig: buildIntegratedSpeechRustConfig(speechProfile, {
+            source: speechSource,
+            target: speechTarget,
+          }),
+        },
       });
       setListening(status.active);
       if (status.active) {
@@ -200,6 +219,8 @@ export function AudioConfigWindow() {
     selectedAsrId,
     selectedMtId,
     selectedSpeechId,
+    speechSource,
+    speechTarget,
     source,
     t,
   ]);
@@ -259,6 +280,46 @@ export function AudioConfigWindow() {
     setMode(next as AudioTranslationMode);
     setError(null);
   };
+
+  const speechSourceOptions = [
+    {
+      value: "auto",
+      label: t("audioConfig.language.autoDetect"),
+    },
+    ...TENCENT_SPEECH_SOURCE_CODES.map((code) => ({
+      value: code,
+      label: t(`audioConfig.language.source.${code}` as "audioConfig.language.source.en"),
+    })),
+  ];
+
+  const speechTargetOptions = getValidTargets(speechSource).map((code) => ({
+    value: code,
+    label: t(`audioConfig.language.target.${code}` as "audioConfig.language.target.zh"),
+  }));
+
+  const handleSpeechSourceChange = (value: string) => {
+    if (value === "auto") {
+      setSpeechSource(AUTO_DETECT_LANGUAGE_PAIR.source);
+      setSpeechTarget(AUTO_DETECT_LANGUAGE_PAIR.target);
+      return;
+    }
+    const nextSource = value as TencentSpeechSource;
+    const normalized = normalizeLanguagePair(nextSource, speechTarget);
+    setSpeechSource(normalized.source);
+    setSpeechTarget(normalized.target);
+  };
+
+  const handleSpeechTargetChange = (value: string) => {
+    const normalized = normalizeLanguagePair(speechSource, value as TencentSpeechTarget);
+    setSpeechSource(normalized.source);
+    setSpeechTarget(normalized.target);
+  };
+
+  const speechSourceSelectValue =
+    speechSource === AUTO_DETECT_LANGUAGE_PAIR.source &&
+    speechTarget === AUTO_DETECT_LANGUAGE_PAIR.target
+      ? "auto"
+      : speechSource;
 
   return (
     <WindowShell>
@@ -484,6 +545,33 @@ export function AudioConfigWindow() {
             ) : null}
           </div>
         )}
+
+        {mode === "integrated" && hasVerifiedSpeech ? (
+          <>
+            <div className="flex flex-col gap-[7px]">
+              <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.speechSource")}</span>
+              <Select
+                ariaLabel={t("audioConfig.field.speechSource")}
+                options={speechSourceOptions}
+                value={speechSourceSelectValue}
+                onValueChange={handleSpeechSourceChange}
+                disabled={listening}
+              />
+              <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.speechSourceHelp")}</p>
+            </div>
+
+            <div className="flex flex-col gap-[7px]">
+              <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.speechTarget")}</span>
+              <Select
+                ariaLabel={t("audioConfig.field.speechTarget")}
+                options={speechTargetOptions}
+                value={speechTarget}
+                onValueChange={handleSpeechTargetChange}
+                disabled={listening}
+              />
+            </div>
+          </>
+        ) : null}
 
         {error ? (
           <p className="text-[12px] text-warn-fg leading-[1.5]">{error}</p>

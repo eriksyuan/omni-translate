@@ -1,6 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { toRustAsrConfig } from "@/lib/settings/asr-cloud-credentials";
-import { toRustSpeechTranslateConfig } from "@/lib/settings/speech-translate";
+import {
+  toRustSpeechTranslateConfig,
+  type TencentLanguagePair,
+} from "@/lib/settings/speech-translate";
 import type {
   AsrProfileConfig,
   MtProfileConfig,
@@ -16,7 +19,7 @@ export type ModularSessionConfig = {
 
 export type IntegratedSessionConfig = {
   mode: "integrated";
-  speechConfig: TencentSpeechTranslateConfig;
+  speechConfig: ReturnType<typeof toRustSpeechTranslateConfig>;
 };
 
 export type AudioSessionConfig = ModularSessionConfig | IntegratedSessionConfig;
@@ -38,8 +41,15 @@ function toRustSessionConfig(sessionConfig: AudioSessionConfig) {
 
   return {
     mode: "integrated" as const,
-    speechConfig: toRustSpeechTranslateConfig(sessionConfig.speechConfig),
+    speechConfig: sessionConfig.speechConfig,
   };
+}
+
+export function buildIntegratedSpeechRustConfig(
+  profile: TencentSpeechTranslateConfig,
+  languagePair: TencentLanguagePair,
+) {
+  return toRustSpeechTranslateConfig(profile, languagePair);
 }
 
 export function startAudioSession({

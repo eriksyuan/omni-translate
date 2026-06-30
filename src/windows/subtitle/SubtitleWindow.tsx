@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isTauri } from "@tauri-apps/api/core";
+import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { SUBTITLE_UPDATE_EVENT, stopAudioSession, type SubtitleUpdatePayload } from "@/lib/audio";
@@ -15,6 +16,11 @@ interface Token {
   hl: boolean;
 }
 
+interface LiveSubtitle {
+  sentenceId: string;
+  translation: string;
+}
+
 function parseTokens(raw: string): Token[] {
   return raw.split("|").map((piece) => {
     const hl = piece.startsWith("*");
@@ -22,18 +28,75 @@ function parseTokens(raw: string): Token[] {
   });
 }
 
+const SUBTITLE_MAX_HEIGHT = 120;
+
 export function SubtitleWindow() {
   const { t } = useTranslation();
+  const shellRef = useRef<HTMLDivElement>(null);
   const [locked, setLocked] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [opacity, setOpacity] = useState(50);
   const [runId, setRunId] = useState(0);
-  const [subtitle, setSubtitle] = useState<SubtitleUpdatePayload | null>(null);
-  const isLive = subtitle !== null;
+  const [live, setLive] = useState<LiveSubtitle | null>(null);
+  const isLive = live !== null;
 
-  const originalText = subtitle?.original ?? t("subtitle.original");
-  const tokenSource = subtitle?.tokens ?? subtitle?.translation ?? t("subtitle.tokens");
+  const tokenSource = live?.translation ?? t("subtitle.tokens");
   const tokens = useMemo(() => parseTokens(tokenSource), [tokenSource, t]);
+
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById("root");
+    const prev = {
+      html: html.style.height,
+      body: body.style.height,
+      root: root?.style.height ?? "",
+    };
+
+    html.style.height = "auto";
+    body.style.height = "auto";
+    if (root) root.style.height = "auto";
+
+    return () => {
+      html.style.height = prev.html;
+      body.style.height = prev.body;
+      if (root) root.style.height = prev.root;
+    };
+  }, []);
+
+  const syncWindowHeight = useCallback(() => {
+    if (!isTauri()) return;
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    const height = Math.min(
+      SUBTITLE_MAX_HEIGHT,
+      Math.ceil(shell.getBoundingClientRect().height),
+    );
+
+    void (async () => {
+      try {
+        const win = getCurrentWindow();
+        const [inner, scale] = await Promise.all([win.innerSize(), win.scaleFactor()]);
+        await win.setSize(new LogicalSize(inner.width / scale, height));
+      } catch {
+        /* window API unavailable */
+      }
+    })();
+  }, []);
+
+  useLayoutEffect(() => {
+    syncWindowHeight();
+  }, [syncWindowHeight, live?.translation, live?.sentenceId, locked, opacity, isLive, runId]);
+
+  useLayoutEffect(() => {
+    const shell = shellRef.current;
+    if (!shell || !isTauri()) return;
+
+    const observer = new ResizeObserver(() => syncWindowHeight());
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, [syncWindowHeight]);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -41,7 +104,13 @@ export function SubtitleWindow() {
     let unlisten: (() => void) | undefined;
 
     void listen<SubtitleUpdatePayload>(SUBTITLE_UPDATE_EVENT, (event) => {
-      setSubtitle(event.payload);
+      const { translation, sentenceId } = event.payload;
+      if (!translation.trim()) return;
+
+      setLive((prev) => ({
+        sentenceId: sentenceId ?? prev?.sentenceId ?? `local-${Date.now()}`,
+        translation,
+      }));
     }).then((fn) => {
       unlisten = fn;
     });
@@ -84,13 +153,13 @@ export function SubtitleWindow() {
   };
 
   const showToolbar = hovered && !locked;
-  const displayTokens = subtitle ? tokens : parseTokens(t("subtitle.tokens"));
+  const displayTokens = isLive ? tokens : parseTokens(t("subtitle.tokens"));
 
   return (
-    <div className="w-full h-full flex items-center p-3.5">
+    <div ref={shellRef} className="w-full p-2">
       <div
         className={cn(
-          "relative w-full rounded p-[18px_22px] border border-solid transition-all duration-250 ease-mac",
+          "relative w-full rounded px-4 py-2.5 border border-solid transition-all duration-250 ease-mac",
           locked
             ? "bg-transparent border-transparent shadow-none"
             : "backdrop-blur-[14px] border-white/16 shadow-[0_12px_40px_rgba(0,0,0,0.45)]",
@@ -144,34 +213,28 @@ export function SubtitleWindow() {
           </span>
         ) : null}
 
-        <div
-          className={cn(
-            "text-[15px] text-white/82 mb-2 leading-[1.4]",
-            locked && "text-white/90 shadow-[0_1px_3px_#000,0_0_1px_#000]",
-          )}
-        >
-          {originalText}
-        </div>
-        <div
-          className={cn(
-            "text-[27px] font-700 leading-[1.3] text-white tracking-[-0.01em]",
-            locked && "subtitle-locked-text",
-          )}
-          key={isLive ? "live" : runId}
-        >
-          {displayTokens.map((token, i) => (
-            <span
-              key={i}
-              className={cn(
-                !isLive && "animate-fadein opacity-0",
-                token.hl && "text-hi",
-                locked && token.hl && "subtitle-locked-hl",
-              )}
-              style={!isLive ? { animationDelay: `${i * 0.22}s` } : undefined}
-            >
-              {token.text}
-            </span>
-          ))}
+        <div className="max-h-[2.6em] overflow-hidden flex flex-col justify-end">
+          <div
+            className={cn(
+              "text-[27px] font-700 leading-[1.3] text-white tracking-[-0.01em]",
+              locked && "subtitle-locked-text",
+            )}
+            key={isLive ? live.sentenceId : runId}
+          >
+            {displayTokens.map((token, i) => (
+              <span
+                key={i}
+                className={cn(
+                  !isLive && "animate-fadein opacity-0",
+                  token.hl && "text-hi",
+                  locked && token.hl && "subtitle-locked-hl",
+                )}
+                style={!isLive ? { animationDelay: `${i * 0.22}s` } : undefined}
+              >
+                {token.text}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </div>

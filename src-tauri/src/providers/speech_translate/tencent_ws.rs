@@ -13,6 +13,8 @@ use uuid::Uuid;
 
 use tauri::Emitter;
 
+use super::tencent_languages::validate_language_pair;
+use crate::audio::{normalized_rms, SILENCE_RMS_THRESHOLD};
 use crate::providers::{
     PipelineErrorPayload, SpeechTranslateConfig, SubtitleUpdatePayload, EVENT_PIPELINE_ERROR,
     EVENT_SUBTITLE_UPDATE,
@@ -27,6 +29,8 @@ const HOST: &str = "asr.cloud.tencent.com";
 const PCM_CHUNK_BYTES: usize = 6400;
 const PACE_INTERVAL: Duration = Duration::from_millis(200);
 const READ_POLL_TIMEOUT: Duration = Duration::from_millis(50);
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(1);
+const STOP_DRAIN_TIMEOUT: Duration = Duration::from_secs(3);
 
 type WsStream = WebSocket<MaybeTlsStream<std::net::TcpStream>>;
 
@@ -47,6 +51,7 @@ struct HandshakeResponse {
 struct TranslateResponse {
     code: i32,
     message: Option<String>,
+    sentence_id: Option<String>,
     #[serde(default, rename = "final")]
     final_: Option<i32>,
     result: Option<TranslateResult>,
@@ -67,6 +72,9 @@ pub struct TencentSpeechTranslateSession {
     source: String,
     target: String,
     trans_model: String,
+    hotword_list: Option<String>,
+    noise_threshold: Option<f64>,
+    domain: Option<i32>,
 }
 
 impl TencentSpeechTranslateSession {
@@ -77,10 +85,20 @@ impl TencentSpeechTranslateSession {
         source: &str,
         target: &str,
         trans_model: &str,
+        hotword_list: Option<&str>,
+        noise_threshold: Option<f64>,
+        domain: Option<i32>,
     ) -> Result<Self, String> {
         if app_id.trim().is_empty() || secret_id.trim().is_empty() || secret_key.trim().is_empty() {
             return Err("AppId, SecretId and SecretKey are required".into());
         }
+        validate_language_pair(source, target)?;
+
+        let hotword = hotword_list
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+
         Ok(Self {
             app_id: app_id.trim().to_string(),
             secret_id: secret_id.trim().to_string(),
@@ -88,6 +106,9 @@ impl TencentSpeechTranslateSession {
             source: source.to_string(),
             target: target.to_string(),
             trans_model: trans_model.to_string(),
+            hotword_list: hotword,
+            noise_threshold,
+            domain,
         })
     }
 
@@ -101,6 +122,9 @@ impl TencentSpeechTranslateSession {
             &self.source,
             &self.target,
             &self.trans_model,
+            self.hotword_list.as_deref(),
+            self.noise_threshold,
+            self.domain,
         )?;
         let (mut socket, _) = connect(url).map_err(|e| format!("websocket connect failed: {e}"))?;
 
@@ -122,26 +146,19 @@ impl TencentSpeechTranslateSession {
         Ok((socket, voice_id))
     }
 
-    pub fn send_pcm_chunk(
-        socket: &mut WsStream,
-        chunk: &[u8],
-    ) -> Result<(), String> {
+    pub fn send_pcm_chunk(socket: &mut WsStream, chunk: &[u8]) -> Result<(), String> {
         socket
             .send(Message::Binary(chunk.to_vec()))
             .map_err(|e| format!("send pcm failed: {e}"))
     }
 
-    pub fn send_end(
-        socket: &mut WsStream,
-    ) -> Result<(), String> {
+    pub fn send_end(socket: &mut WsStream) -> Result<(), String> {
         socket
             .send(Message::Text(r#"{"type":"end"}"#.into()))
             .map_err(|e| format!("send end failed: {e}"))
     }
 
-    pub fn read_message(
-        socket: &mut WsStream,
-    ) -> Result<Option<TranslateResponse>, String> {
+    pub fn read_message(socket: &mut WsStream) -> Result<Option<TranslateResponse>, String> {
         match socket.read() {
             Ok(Message::Text(text)) => {
                 let payload: TranslateResponse =
@@ -196,7 +213,8 @@ fn poll_ws_message(app: &tauri::AppHandle, socket: &mut WsStream) -> WsPoll {
                 if !original.is_empty() || !translation.is_empty() {
                     log_info!(
                         "speech",
-                        "ws result end={} src=\"{}\" tgt=\"{}\"",
+                        "ws result sid={:?} end={} src=\"{}\" tgt=\"{}\"",
+                        msg.sentence_id,
                         result.sentence_end,
                         logging::preview(&original, 80),
                         logging::preview(&translation, 80),
@@ -204,6 +222,8 @@ fn poll_ws_message(app: &tauri::AppHandle, socket: &mut WsStream) -> WsPoll {
                     let payload = SubtitleUpdatePayload {
                         original: original.clone(),
                         translation: translation.clone(),
+                        sentence_id: msg.sentence_id.clone(),
+                        sentence_end: result.sentence_end,
                         tokens: build_translation_tokens(&translation),
                     };
                     let _ = app.emit(EVENT_SUBTITLE_UPDATE, payload);
@@ -230,55 +250,44 @@ fn poll_ws_message(app: &tauri::AppHandle, socket: &mut WsStream) -> WsPoll {
     }
 }
 
-pub fn test_speech_translate_connection(config: &SpeechTranslateConfig) -> Result<(), String> {
-    let SpeechTranslateConfig::TencentRealtime {
-        app_id,
-        secret_id,
-        secret_key,
-        source,
-        target,
-        trans_model,
-    } = config;
-
-    let session = TencentSpeechTranslateSession::new(
-        app_id,
-        secret_id,
-        secret_key,
-        source,
-        target,
-        trans_model,
-    )?;
-
-    let (mut socket, _voice_id) = session.connect()?;
-
-    let silence = vec![0_u8; PCM_CHUNK_BYTES];
-    for _ in 0..3 {
-        TencentSpeechTranslateSession::send_pcm_chunk(&mut socket, &silence)?;
-        std::thread::sleep(PACE_INTERVAL);
-    }
-
-    TencentSpeechTranslateSession::send_end(&mut socket)?;
-
-    let deadline = Instant::now() + Duration::from_secs(5);
+fn drain_ws_until_final(
+    app: &tauri::AppHandle,
+    socket: &mut WsStream,
+    deadline: Instant,
+) -> WsPoll {
     while Instant::now() < deadline {
-        match TencentSpeechTranslateSession::read_message(&mut socket) {
-            Ok(Some(msg)) => {
-                if msg.code != 0 {
-                    return Err(msg
-                        .message
-                        .unwrap_or_else(|| format!("error code {}", msg.code)));
-                }
-                if msg.final_.unwrap_or(0) >= 1 {
-                    let _ = socket.close(None);
-                    return Ok(());
-                }
-            }
-            Ok(None) => continue,
-            Err(err) if err.contains("closed") => return Ok(()),
-            Err(err) => return Err(err),
+        match poll_ws_message(app, socket) {
+            WsPoll::Final | WsPoll::Closed => return WsPoll::Final,
+            WsPoll::Failed => return WsPoll::Failed,
+            WsPoll::Idle => thread::sleep(Duration::from_millis(10)),
         }
     }
+    WsPoll::Idle
+}
 
+fn silence_pcm_chunk() -> Vec<u8> {
+    vec![0_u8; PCM_CHUNK_BYTES]
+}
+
+fn maybe_silence_pcm_packet(packet: Vec<u8>) -> Vec<u8> {
+    let sample_count = packet.len() / 2;
+    if sample_count == 0 {
+        return packet;
+    }
+    let mut samples = Vec::with_capacity(sample_count);
+    for chunk in packet.chunks_exact(2) {
+        samples.push(i16::from_le_bytes([chunk[0], chunk[1]]));
+    }
+    if normalized_rms(&samples) < SILENCE_RMS_THRESHOLD {
+        silence_pcm_chunk()
+    } else {
+        packet
+    }
+}
+
+pub fn test_speech_translate_connection(config: &SpeechTranslateConfig) -> Result<(), String> {
+    let session = build_session_from_config(config)?;
+    let (mut socket, _voice_id) = session.connect()?;
     let _ = socket.close(None);
     Ok(())
 }
@@ -289,23 +298,7 @@ pub fn run_integrated_worker(
     pcm_rx: Receiver<crate::audio::IntegratedPcmInput>,
     stop_rx: Receiver<()>,
 ) {
-    let SpeechTranslateConfig::TencentRealtime {
-        app_id,
-        secret_id,
-        secret_key,
-        source,
-        target,
-        trans_model,
-    } = config;
-
-    let session = match TencentSpeechTranslateSession::new(
-        &app_id,
-        &secret_id,
-        &secret_key,
-        &source,
-        &target,
-        &trans_model,
-    ) {
+    let session = match build_session_from_config(&config) {
         Ok(session) => session,
         Err(err) => {
             log_error!("speech", "init failed: {err}");
@@ -325,21 +318,29 @@ pub fn run_integrated_worker(
 
     log_info!(
         "speech",
-        "connected voice_id={voice_id} source={source} target={target} model={trans_model}"
+        "connected voice_id={voice_id} source={} target={} model={}",
+        session.source,
+        session.target,
+        session.trans_model
     );
 
     let mut feeder = crate::audio::IntegratedPcmFeeder::new();
     let mut last_send = Instant::now() - PACE_INTERVAL;
     let mut graceful_end = false;
+    let mut stop_requested = false;
     let mut pcm_sent = 0_u64;
     let mut pcm_input_batches = 0_u64;
     let mut last_starve_log = Instant::now() - Duration::from_secs(10);
 
     loop {
         if stop_rx.try_recv().is_ok() {
-            log_info!("speech", "stop requested sent_pcm={pcm_sent} pending={}", feeder.pending_samples());
-            let _ = socket.close(None);
-            return;
+            stop_requested = true;
+            log_info!(
+                "speech",
+                "stop requested sent_pcm={pcm_sent} pending={}",
+                feeder.pending_samples()
+            );
+            break;
         }
 
         while let Ok(chunk) = pcm_rx.try_recv() {
@@ -347,7 +348,6 @@ pub fn run_integrated_worker(
             feeder.push_interleaved(&chunk.samples, chunk.sample_rate, chunk.channels);
         }
 
-        // Drain all pending server messages before sending the next PCM chunk.
         loop {
             match poll_ws_message(&app, &mut socket) {
                 WsPoll::Failed => return,
@@ -365,9 +365,12 @@ pub fn run_integrated_worker(
         }
 
         let now = Instant::now();
-        // Send at 1:1 realtime (200ms audio every 200ms). Catch up when buffered.
         while now.duration_since(last_send) >= PACE_INTERVAL {
-            let Some(packet) = feeder.take_pcm_bytes(PCM_CHUNK_BYTES) else {
+            let packet = if let Some(packet) = feeder.take_pcm_bytes(PCM_CHUNK_BYTES) {
+                maybe_silence_pcm_packet(packet)
+            } else if now.duration_since(last_send) >= KEEPALIVE_INTERVAL {
+                silence_pcm_chunk()
+            } else {
                 if now.duration_since(last_send) >= Duration::from_secs(1)
                     && last_starve_log.elapsed() >= Duration::from_secs(2)
                 {
@@ -381,6 +384,7 @@ pub fn run_integrated_worker(
                 }
                 break;
             };
+
             if let Err(err) = TencentSpeechTranslateSession::send_pcm_chunk(&mut socket, &packet) {
                 log_error!(
                     "speech",
@@ -396,12 +400,22 @@ pub fn run_integrated_worker(
                 log_debug!(
                     "speech",
                     "sent pcm packet #{pcm_sent} pending={} input_batches={pcm_input_batches}",
-                    feeder.pending_samples()
+                    feeder.pending_samples(),
                 );
             }
         }
 
         thread::sleep(Duration::from_millis(10));
+    }
+
+    if stop_requested {
+        if let Err(err) = TencentSpeechTranslateSession::send_end(&mut socket) {
+            log_warn!("speech", "send_end on stop failed: {err}");
+        } else {
+            let _ = drain_ws_until_final(&app, &mut socket, Instant::now() + STOP_DRAIN_TIMEOUT);
+        }
+        let _ = socket.close(None);
+        return;
     }
 
     if !graceful_end {
@@ -413,16 +427,34 @@ pub fn run_integrated_worker(
         log_warn!("speech", "send_end failed: {err}");
     }
 
-    let deadline = Instant::now() + Duration::from_secs(3);
-    while Instant::now() < deadline {
-        match poll_ws_message(&app, &mut socket) {
-            WsPoll::Final | WsPoll::Closed => break,
-            WsPoll::Failed => return,
-            WsPoll::Idle => thread::sleep(Duration::from_millis(10)),
-        }
-    }
-
+    let _ = drain_ws_until_final(&app, &mut socket, Instant::now() + STOP_DRAIN_TIMEOUT);
     let _ = socket.close(None);
+}
+
+fn build_session_from_config(config: &SpeechTranslateConfig) -> Result<TencentSpeechTranslateSession, String> {
+    match config {
+        SpeechTranslateConfig::TencentRealtime {
+            app_id,
+            secret_id,
+            secret_key,
+            source,
+            target,
+            trans_model,
+            hotword_list,
+            noise_threshold,
+            domain,
+        } => TencentSpeechTranslateSession::new(
+            app_id,
+            secret_id,
+            secret_key,
+            source,
+            target,
+            trans_model,
+            hotword_list.as_deref(),
+            *noise_threshold,
+            *domain,
+        ),
+    }
 }
 
 fn emit_speech_error(app: &tauri::AppHandle, code: &str, message: &str) {
@@ -444,27 +476,78 @@ fn build_ws_url(
     source: &str,
     target: &str,
     trans_model: &str,
+    hotword_list: Option<&str>,
+    noise_threshold: Option<f64>,
+    domain: Option<i32>,
 ) -> Result<String, String> {
     let timestamp = chrono::Utc::now().timestamp();
     let expired = timestamp + 86_400;
     let nonce = (timestamp as u32) ^ 0x5A17_0000;
 
-    let sign_plain = format!(
-        "{HOST}/asr/speech_translate/{app_id}?expired={expired}&nonce={nonce}&secretid={secret_id}&source={source}&target={target}&timestamp={timestamp}&trans_model={trans_model}&voice_format=1&voice_id={voice_id}",
-    );
+    let mut pairs: Vec<(&str, String)> = vec![
+        ("expired", expired.to_string()),
+        ("nonce", nonce.to_string()),
+        ("secretid", secret_id.to_string()),
+        ("source", source.to_string()),
+        ("target", target.to_string()),
+        ("timestamp", timestamp.to_string()),
+        ("trans_model", trans_model.to_string()),
+        ("voice_format", "1".to_string()),
+        ("voice_id", voice_id.to_string()),
+    ];
+
+    if let Some(value) = domain {
+        pairs.push(("domain", value.to_string()));
+    }
+    if let Some(value) = hotword_list {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            pairs.push(("hotword_list", trimmed.to_string()));
+        }
+    }
+    if let Some(value) = noise_threshold {
+        if value != 0.0 {
+            pairs.push(("noise_threshold", format_noise_threshold(value)));
+        }
+    }
+
+    pairs.sort_by(|a, b| a.0.cmp(b.0));
+
+    let query_plain = pairs
+        .iter()
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect::<Vec<_>>()
+        .join("&");
+
+    let sign_plain = format!("{HOST}/asr/speech_translate/{app_id}?{query_plain}");
 
     let mut mac = HmacSha1::new_from_slice(secret_key.as_bytes())
         .map_err(|e| format!("invalid secret key: {e}"))?;
     mac.update(sign_plain.as_bytes());
     let signature = STANDARD.encode(mac.finalize().into_bytes());
 
+    let query_encoded = pairs
+        .iter()
+        .map(|(key, value)| {
+            format!(
+                "{key}={}",
+                urlencoding::encode(value)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("&");
+
     Ok(format!(
-        "wss://{HOST}/asr/speech_translate/{app_id}?expired={expired}&nonce={nonce}&secretid={secretid}&source={source}&target={target}&timestamp={timestamp}&trans_model={trans_model}&voice_format=1&voice_id={voice_id}&signature={signature}",
-        secretid = urlencoding::encode(secret_id),
-        source = urlencoding::encode(source),
-        target = urlencoding::encode(target),
-        trans_model = urlencoding::encode(trans_model),
-        voice_id = urlencoding::encode(voice_id),
-        signature = urlencoding::encode(&signature),
+        "wss://{HOST}/asr/speech_translate/{app_id}?{query_encoded}&signature={}",
+        urlencoding::encode(&signature)
     ))
+}
+
+fn format_noise_threshold(value: f64) -> String {
+    let clamped = value.clamp(-2.0, 2.0);
+    if (clamped - clamped.round()).abs() < f64::EPSILON {
+        clamped.round().to_string()
+    } else {
+        format!("{clamped:.2}")
+    }
 }

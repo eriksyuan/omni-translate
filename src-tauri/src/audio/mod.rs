@@ -6,6 +6,7 @@ mod pipeline;
 mod session;
 mod types;
 
+pub use buffer::{normalized_rms, SILENCE_RMS_THRESHOLD};
 pub use integrated_feeder::{IntegratedPcmFeeder, IntegratedPcmInput};
 
 pub use capture::{

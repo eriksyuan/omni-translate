@@ -53,6 +53,9 @@ pub struct SubtitleUpdatePayload {
     pub original: String,
     pub translation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub sentence_id: Option<String>,
+    pub sentence_end: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tokens: Option<String>,
 }
 
@@ -88,6 +91,12 @@ pub enum SpeechTranslateConfig {
         target: String,
         #[serde(rename = "transModel")]
         trans_model: String,
+        #[serde(default, rename = "hotwordList")]
+        hotword_list: Option<String>,
+        #[serde(default, rename = "noiseThreshold")]
+        noise_threshold: Option<f64>,
+        #[serde(default)]
+        domain: Option<i32>,
     },
 }
 

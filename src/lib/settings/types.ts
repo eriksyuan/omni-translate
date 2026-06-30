@@ -2,8 +2,16 @@ export type AsrEngine = "whisper" | "cloudAliyun" | "cloudTencent";
 export type WhisperModel = "tiny" | "base" | "large";
 export type MtTraditionalProvider = "google" | "deepl";
 export type AudioTranslationMode = "modular" | "integrated";
-export type SpeechTranslateSource = "en" | "zh" | "zh_en";
 export type TencentTransModel = "hunyuan-translation-lite" | "hunyuan-translation";
+export type TencentSpeechDomain = 1 | 2 | 3;
+
+import type {
+  TencentLanguagePair,
+  TencentSpeechSource,
+  TencentSpeechTarget,
+} from "@/lib/settings/tencent-speech-languages";
+
+export type { TencentLanguagePair, TencentSpeechSource, TencentSpeechTarget };
 
 export type AsrProfileId =
   | "asr:whisper:tiny"
@@ -58,15 +66,17 @@ export interface MtLlmProfileConfig {
 
 export type MtProfileConfig = MtTraditionalProfileConfig | MtLlmProfileConfig;
 
+/** Service profile: credentials + engine tuning (no language pair). */
 export interface TencentSpeechTranslateConfig {
   kind: "speechTranslate";
   provider: "tencentRealtime";
   appId: string;
   secretId: string;
   secretKey: string;
-  source: SpeechTranslateSource;
-  target: "zh";
   transModel: TencentTransModel;
+  hotwordList?: string;
+  noiseThreshold?: number;
+  domain?: TencentSpeechDomain;
 }
 
 export type SpeechTranslateProfileConfig = TencentSpeechTranslateConfig;
@@ -76,6 +86,8 @@ export interface AudioSessionSelection {
   asrId?: AsrProfileId;
   mtId?: MtProfileId;
   speechTranslateId?: SpeechTranslateProfileId;
+  speechSource?: TencentSpeechSource;
+  speechTarget?: TencentSpeechTarget;
 }
 
 export interface SettingsStore {

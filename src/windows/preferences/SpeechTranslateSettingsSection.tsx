@@ -6,6 +6,7 @@ import { FormField } from "@/components/ui/form-row";
 import { Input } from "@/components/ui/input";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Select } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { testSpeechTranslateConnection } from "@/lib/audio/session";
 import {
   defaultTencentSpeechTranslateConfig,
@@ -14,22 +15,24 @@ import {
   markSpeechTranslateVerified,
   revokeSpeechTranslateVerified,
   saveSpeechTranslateProfile,
+  SPEECH_TRANSLATE_TEST_LANGUAGE_PAIR,
   TENCENT_SPEECH_TRANSLATE_PROFILE_ID,
   toRustSpeechTranslateConfig,
-  type SpeechTranslateSource,
+  type TencentSpeechDomain,
   type TencentTransModel,
   type TestState,
 } from "@/lib/settings";
 
-const SOURCE_OPTIONS = [
-  { value: "en" as const, labelKey: "speechTranslateSettings.source.en" as const },
-  { value: "zh" as const, labelKey: "speechTranslateSettings.source.zh" as const },
-  { value: "zh_en" as const, labelKey: "speechTranslateSettings.source.zhEn" as const },
+const TRANS_MODEL_OPTIONS = [
+  { value: "hunyuan-translation" as const, labelKey: "speechTranslateSettings.transModel.standard" as const },
+  { value: "hunyuan-translation-lite" as const, labelKey: "speechTranslateSettings.transModel.lite" as const },
 ];
 
-const TRANS_MODEL_OPTIONS = [
-  { value: "hunyuan-translation-lite" as const, labelKey: "speechTranslateSettings.transModel.lite" as const },
-  { value: "hunyuan-translation" as const, labelKey: "speechTranslateSettings.transModel.standard" as const },
+const DOMAIN_OPTIONS = [
+  { value: "", labelKey: "speechTranslateSettings.domain.none" as const },
+  { value: "1", labelKey: "speechTranslateSettings.domain.tech" as const },
+  { value: "2", labelKey: "speechTranslateSettings.domain.movie" as const },
+  { value: "3", labelKey: "speechTranslateSettings.domain.song" as const },
 ];
 
 export function SpeechTranslateSettingsSection() {
@@ -38,6 +41,7 @@ export function SpeechTranslateSettingsSection() {
   const [config, setConfig] = useState(defaultTencentSpeechTranslateConfig());
   const [test, setTest] = useState<TestState>("idle");
   const [saved, setSaved] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -80,7 +84,9 @@ export function SpeechTranslateSettingsSection() {
     saveSpeechTranslateProfile(profileId, config);
     flashSaved();
 
-    void testSpeechTranslateConnection(toRustSpeechTranslateConfig(config))
+    void testSpeechTranslateConnection(
+      toRustSpeechTranslateConfig(config, SPEECH_TRANSLATE_TEST_LANGUAGE_PAIR),
+    )
       .then(() => {
         markSpeechTranslateVerified(profileId);
         setTest("ok");
@@ -91,6 +97,7 @@ export function SpeechTranslateSettingsSection() {
   };
 
   const canTest = isSpeechTranslateConfigComplete(config);
+  const domainValue = config.domain ? String(config.domain) : "";
 
   return (
     <section>
@@ -127,22 +134,6 @@ export function SpeechTranslateSettingsSection() {
             />
           </FormField>
 
-          <FormField stacked label={t("speechTranslateSettings.source.label")} description={t("speechTranslateSettings.source.help")}>
-            <Select
-              ariaLabel={t("speechTranslateSettings.source.label")}
-              options={SOURCE_OPTIONS.map((option) => ({
-                value: option.value,
-                label: t(option.labelKey),
-              }))}
-              value={config.source}
-              onValueChange={(value) => updateConfig({ source: value as SpeechTranslateSource })}
-            />
-          </FormField>
-
-          <FormField stacked label={t("speechTranslateSettings.target.label")} description={t("speechTranslateSettings.target.help")}>
-            <Input value={t("speechTranslateSettings.target.zh")} readOnly disabled />
-          </FormField>
-
           <FormField stacked label={t("speechTranslateSettings.transModel.label")} description={t("speechTranslateSettings.transModel.help")}>
             <Select
               ariaLabel={t("speechTranslateSettings.transModel.label")}
@@ -154,6 +145,72 @@ export function SpeechTranslateSettingsSection() {
               onValueChange={(value) => updateConfig({ transModel: value as TencentTransModel })}
             />
           </FormField>
+
+          <div className="mt-2">
+            <button
+              type="button"
+              className="text-[13px] text-accent-fg hover:underline"
+              onClick={() => setShowAdvanced((open) => !open)}
+            >
+              {showAdvanced
+                ? t("speechTranslateSettings.advanced.hide")
+                : t("speechTranslateSettings.advanced.show")}
+            </button>
+          </div>
+
+          {showAdvanced ? (
+            <>
+              <FormField
+                stacked
+                label={t("speechTranslateSettings.hotwordList.label")}
+                description={t("speechTranslateSettings.hotwordList.help")}
+              >
+                <Input
+                  value={config.hotwordList ?? ""}
+                  onChange={(event) => updateConfig({ hotwordList: event.target.value })}
+                  placeholder={t("speechTranslateSettings.hotwordList.placeholder")}
+                  autoComplete="off"
+                />
+              </FormField>
+
+              <FormField
+                stacked
+                label={t("speechTranslateSettings.noiseThreshold.label")}
+                description={t("speechTranslateSettings.noiseThreshold.help")}
+              >
+                <div className="flex items-center gap-3">
+                  <Slider
+                    min={-2}
+                    max={2}
+                    step={0.1}
+                    value={[config.noiseThreshold ?? 0]}
+                    onValueChange={([value]) => updateConfig({ noiseThreshold: value ?? 0 })}
+                    aria-label={t("speechTranslateSettings.noiseThreshold.label")}
+                    className="flex-1"
+                  />
+                  <span className="text-[12px] text-fg-2 w-8 text-right tabular-nums">
+                    {(config.noiseThreshold ?? 0).toFixed(1)}
+                  </span>
+                </div>
+              </FormField>
+
+              <FormField stacked label={t("speechTranslateSettings.domain.label")} description={t("speechTranslateSettings.domain.help")}>
+                <Select
+                  ariaLabel={t("speechTranslateSettings.domain.label")}
+                  options={DOMAIN_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: t(option.labelKey),
+                  }))}
+                  value={domainValue}
+                  onValueChange={(value) =>
+                    updateConfig({
+                      domain: value ? (Number(value) as TencentSpeechDomain) : undefined,
+                    })
+                  }
+                />
+              </FormField>
+            </>
+          ) : null}
 
           <FormField
             label={t("speechTranslateSettings.action.test")}

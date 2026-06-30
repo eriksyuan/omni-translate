@@ -6,11 +6,14 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   CONFIGURE_SENTINEL,
   getProviderMeta,
+  resolveLanguagePair,
   type AsrProfileId,
   type AudioTranslationMode,
   type MtProfileId,
   type ProviderKind,
   type SpeechTranslateProfileId,
+  type TencentSpeechSource,
+  type TencentSpeechTarget,
 } from "@/lib/settings";
 import { getVerifiedProfileIds, loadAudioSession } from "@/lib/settings/storage";
 import { SETTINGS_VERIFIED_CHANGED_EVENT } from "@/lib/preferences-navigation";
@@ -29,6 +32,8 @@ export function useAudioSessionProviders() {
   const [selectedAsrId, setSelectedAsrId] = useState<AsrProfileId | undefined>();
   const [selectedMtId, setSelectedMtId] = useState<MtProfileId | undefined>();
   const [selectedSpeechId, setSelectedSpeechId] = useState<SpeechTranslateProfileId | undefined>();
+  const [speechSource, setSpeechSource] = useState<TencentSpeechSource>("en");
+  const [speechTarget, setSpeechTarget] = useState<TencentSpeechTarget>("zh");
 
   const buildOptions = useCallback(
     (kind: ProviderKind, ids: string[]): VerifiedProviderOption[] => {
@@ -50,11 +55,14 @@ export function useAudioSessionProviders() {
     const mtIds = getVerifiedProfileIds("mt") as MtProfileId[];
     const speechIds = getVerifiedProfileIds("speechTranslate") as SpeechTranslateProfileId[];
     const session = loadAudioSession();
+    const pair = resolveLanguagePair(session.speechSource, session.speechTarget);
 
     setMode(session.mode ?? "modular");
     setAsrOptions(buildOptions("asr", asrIds));
     setMtOptions(buildOptions("mt", mtIds));
     setSpeechOptions(buildOptions("speechTranslate", speechIds));
+    setSpeechSource(pair.source);
+    setSpeechTarget(pair.target);
 
     setSelectedAsrId((current) => {
       if (current && asrIds.includes(current)) return current;
@@ -126,9 +134,13 @@ export function useAudioSessionProviders() {
     selectedAsrId,
     selectedMtId,
     selectedSpeechId,
+    speechSource,
+    speechTarget,
     setSelectedAsrId,
     setSelectedMtId,
     setSelectedSpeechId,
+    setSpeechSource,
+    setSpeechTarget,
     refresh,
     hasVerifiedAsr,
     hasVerifiedMt,
