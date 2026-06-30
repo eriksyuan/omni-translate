@@ -7,8 +7,8 @@ describe("WindowRoot", () => {
   it("renders the preferences window for the current Tauri window label", () => {
     render(<WindowRoot />);
 
-    expect(screen.getByRole("navigation", { name: i18n.t("preferences.title") })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: i18n.t("preferences.nav.general") })).toBeInTheDocument();
+    expect(screen.getByRole("tablist", { name: i18n.t("preferences.title") })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: i18n.t("preferences.nav.general") })).toBeInTheDocument();
     expect(screen.getByLabelText(i18n.t("generalSettings.language.label"))).toBeInTheDocument();
   });
 });

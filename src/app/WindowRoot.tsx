@@ -16,9 +16,18 @@ const VIEWS: Record<WindowLabel, () => ReactElement> = {
   [WINDOW_LABELS.PREFERENCES]: PreferencesWindow,
 };
 
+function resolveLabel(): string {
+  try {
+    return getCurrentWindow().label;
+  } catch {
+    const param = new URLSearchParams(window.location.search).get("window");
+    return param ?? "";
+  }
+}
+
 export function WindowRoot() {
   const { t } = useTranslation();
-  const label = getCurrentWindow().label as WindowLabel;
+  const label = resolveLabel() as WindowLabel;
   const View = VIEWS[label];
 
   if (!View) {

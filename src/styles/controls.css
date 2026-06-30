@@ -1,0 +1,276 @@
+/* OmniTranslate shared control primitives.
+   Ported from opendesign/assets/macos.css (read-only source), excluding the
+   design-kit presentation chrome (.stage / .kit-bar / .seg / .win / .traffic
+   / .caption) which is not part of the shipped product UI. */
+
+/* ---- typography helpers ------------------------------------------------- */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 590;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg3);
+}
+.muted {
+  color: var(--fg2);
+}
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- buttons ------------------------------------------------------------ */
+.btn {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 510;
+  padding: 8px 16px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--control);
+  color: var(--fg);
+  transition:
+    filter 0.12s var(--ease),
+    transform 0.06s var(--ease),
+    background 0.12s;
+}
+.btn:hover {
+  filter: brightness(1.08);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 90, 255, 0.35);
+}
+.btn--primary:hover {
+  background: var(--accent);
+  filter: brightness(1.06);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--accent);
+}
+.btn--ghost:hover {
+  background: var(--hover);
+  filter: none;
+}
+.btn--danger {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: none !important;
+  transform: none !important;
+}
+.btn--lg {
+  padding: 11px 20px;
+  font-size: 14.5px;
+}
+.btn--block {
+  width: 100%;
+}
+
+/* ---- custom select ------------------------------------------------------ */
+.select {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+}
+.select select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--fg);
+  background: var(--field);
+  border: 0.5px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 8px 34px 8px 12px;
+  cursor: pointer;
+}
+.select::after {
+  content: "";
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4px;
+  border-right: 1.6px solid var(--fg2);
+  border-bottom: 1.6px solid var(--fg2);
+  transform: rotate(45deg) translateY(-2px);
+  pointer-events: none;
+}
+.select select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- inputs ------------------------------------------------------------- */
+input.field,
+textarea.field {
+  width: 100%;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--fg);
+  background: var(--field);
+  border: 0.5px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+input.field::placeholder,
+textarea.field::placeholder {
+  color: var(--fg3);
+}
+input.field:focus,
+textarea.field:focus,
+.select select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+textarea.field {
+  resize: vertical;
+  line-height: 1.5;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+/* ---- toggle switch ------------------------------------------------------ */
+.switch {
+  position: relative;
+  width: 38px;
+  height: 23px;
+  flex: none;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--control);
+  transition: background 0.2s var(--ease);
+}
+.switch span::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s var(--ease);
+}
+.switch input:checked + span {
+  background: var(--success);
+}
+.switch input:checked + span::after {
+  transform: translateX(15px);
+}
+.switch input:focus-visible + span {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* ---- status pill -------------------------------------------------------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 590;
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0;
+}
+.pill--ok {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+}
+.pill--bad {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+}
+.pill--info {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+/* ---- warning banner ----------------------------------------------------- */
+.banner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border: 0.5px solid var(--warn-bd);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+.banner svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* ---- form row ----------------------------------------------------------- */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.field-label {
+  font-size: 13px;
+  font-weight: 510;
+  color: var(--fg);
+}
+.field-help {
+  font-size: 11.5px;
+  color: var(--fg2);
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+/* ---- misc --------------------------------------------------------------- */
+.ico {
+  display: inline-flex;
+}
+.ico svg {
+  display: block;
+}
+.kbd {
+  font: 11px/1 var(--mono);
+  color: var(--fg2);
+  background: var(--control);
+  border: 0.5px solid var(--hairline);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
