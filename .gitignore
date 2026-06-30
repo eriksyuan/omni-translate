@@ -32,6 +32,9 @@ src-tauri/resources/locales/
 .cargo-home/.global-cache
 .cargo-home/.package-cache
 
+# Design source (handoff input, not part of the app build)
+opendesign/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
