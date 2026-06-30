@@ -8,8 +8,14 @@ import {
   SpeakerIcon,
   SpinnerIcon,
   WarningIcon,
-} from "@/windows/shared/icons";
-import styles from "./audio-config.module.css";
+} from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
+import { Banner } from "@/components/ui/banner";
+import { Button } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { Select } from "@/components/ui/select";
+import { WindowShell } from "@/components/ui/window-shell";
+import { cn } from "@/lib/cn";
 
 type DepState = "idle" | "installing" | "done";
 
@@ -19,11 +25,7 @@ function InstallProgress() {
     const id = requestAnimationFrame(() => setFull(true));
     return () => cancelAnimationFrame(id);
   }, []);
-  return (
-    <div className={`${styles.progress} ${full ? styles.progressFull : ""}`}>
-      <i />
-    </div>
-  );
+  return <ProgressBar value={full ? 100 : 0} animated className="w-24 shrink-0" />;
 }
 
 export function AudioConfigWindow() {
@@ -49,116 +51,129 @@ export function AudioConfigWindow() {
   };
 
   return (
-    <main className={styles.panel}>
-      <div className={styles.body}>
-        <div className={styles.title}>
-          <span className={styles.gico}>
+    <WindowShell>
+      <div className="p-[18px] flex flex-col gap-4">
+        <div className="flex items-center gap-2.5 text-[15px] font-600">
+          <span className="icon-box-lg">
             <MicIcon size={17} />
           </span>
           {t("audioConfig.panelTitle")}
         </div>
 
-        <div className={`banner ${styles.banner} ${ready ? styles.bannerCollapsed : ""}`}>
-          <div className={styles.bannerInner}>
+        <Banner
+          className={cn(
+            "transition-[max-height,opacity,padding,margin,border-width] duration-300 ease-mac overflow-hidden",
+            ready ? "max-h-0 opacity-0 py-0 border-0 m-0" : "max-h-80",
+          )}
+        >
+          <div className="flex gap-[11px] items-start">
             <WarningIcon size={18} />
-            <div style={{ flex: 1 }}>
-              <b className={styles.bannerTitle}>{t("audioConfig.banner.title")}</b>
-              <div className={styles.deps}>
-                <div className={`${styles.dep} ${mic === "done" ? styles.depDone : ""}`}>
-                  <span className={styles.dico}>
+            <div className="flex-1">
+              <b className="font-600">{t("audioConfig.banner.title")}</b>
+              <div className="flex flex-col gap-[9px] mt-2.5">
+                <div className={cn("flex items-center gap-2.5 text-[12.5px]", mic === "done" && "text-fg-2")}>
+                  <span className={cn("w-5 inline-flex justify-center flex-none", mic === "done" ? "text-success" : "text-warn-fg")}>
                     {mic === "done" ? <CircleCheckIcon size={15} /> : <MicIcon size={15} />}
                   </span>
-                  <span className={styles.dname}>{t("audioConfig.dep.mic")}</span>
+                  <span className="flex-1">{t("audioConfig.dep.mic")}</span>
                   {mic === "done" ? (
-                    <span className="pill pill--ok">
+                    <Badge variant="ok">
                       <CheckIcon size={11} />
                       {t("audioConfig.dep.granted")}
-                    </span>
+                    </Badge>
                   ) : (
-                    <button type="button" className="btn" onClick={grantMic}>
+                    <Button className="px-[11px] py-[5px] text-[12px]" onClick={grantMic}>
                       {t("audioConfig.dep.grant")}
-                    </button>
+                    </Button>
                   )}
                 </div>
 
-                <div className={`${styles.dep} ${black === "done" ? styles.depDone : ""}`}>
-                  <span className={styles.dico}>
+                <div className={cn("flex items-center gap-2.5 text-[12.5px]", black === "done" && "text-fg-2")}>
+                  <span className={cn("w-5 inline-flex justify-center flex-none", black === "done" ? "text-success" : "text-warn-fg")}>
                     {black === "done" ? <CircleCheckIcon size={15} /> : <SpeakerIcon size={15} />}
                   </span>
-                  <span className={styles.dname}>{t("audioConfig.dep.blackhole")}</span>
+                  <span className="flex-1">{t("audioConfig.dep.blackhole")}</span>
                   {black === "done" ? (
-                    <span className="pill pill--ok">
+                    <Badge variant="ok">
                       <CheckIcon size={11} />
                       {t("audioConfig.dep.installed")}
-                    </span>
+                    </Badge>
                   ) : black === "installing" ? (
                     <InstallProgress />
                   ) : (
-                    <button type="button" className="btn" onClick={installBlack}>
+                    <Button className="px-[11px] py-[5px] text-[12px]" onClick={installBlack}>
                       {t("audioConfig.dep.install")}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </Banner>
 
         {ready ? (
-          <div className={styles.readyPills}>
-            <span className="pill pill--ok">
+          <div className="flex gap-2.5">
+            <Badge variant="ok">
               <CheckIcon size={12} />
               {t("audioConfig.ready.mic")}
-            </span>
-            <span className="pill pill--ok">
+            </Badge>
+            <Badge variant="ok">
               <CheckIcon size={12} />
               {t("audioConfig.ready.blackhole")}
-            </span>
+            </Badge>
           </div>
         ) : null}
 
-        <div className={`${styles.ctl} ${ready ? "" : styles.ctlDisabled}`}>
-          <span className={styles.ctlLabel}>{t("audioConfig.field.source")}</span>
+        <div className={cn("flex flex-col gap-[7px]", !ready && "opacity-50")}>
+          <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.source")}</span>
           {ready ? (
-            <div className="select">
-              <select aria-label={t("audioConfig.field.source")}>
-                <option>{t("audioConfig.source.blackhole")}</option>
-                <option>{t("audioConfig.source.mic")}</option>
-              </select>
-            </div>
+            <Select
+              ariaLabel={t("audioConfig.field.source")}
+              options={[
+                { value: "blackhole", label: t("audioConfig.source.blackhole") },
+                { value: "mic", label: t("audioConfig.source.mic") },
+              ]}
+              defaultValue="blackhole"
+            />
           ) : (
-            <div className={styles.lockedField}>
+            <div className="flex items-center gap-2 bg-field border border-dashed border-hairline rounded-sm px-3 py-2 text-[12.5px] text-fg-3">
               <MicIcon size={14} />
               {t("audioConfig.field.locked")}
             </div>
           )}
         </div>
 
-        <div className={styles.ctl}>
-          <span className={styles.ctlLabel}>{t("audioConfig.field.asr")}</span>
-          <div className="select">
-            <select aria-label={t("audioConfig.field.asr")}>
-              <option>{t("audioConfig.asr.whisperBase")}</option>
-              <option>{t("audioConfig.asr.whisperLarge")}</option>
-              <option>{t("audioConfig.asr.aliyun")}</option>
-            </select>
-          </div>
+        <div className="flex flex-col gap-[7px]">
+          <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.asr")}</span>
+          <Select
+            ariaLabel={t("audioConfig.field.asr")}
+            options={[
+              { value: "whisperBase", label: t("audioConfig.asr.whisperBase") },
+              { value: "whisperLarge", label: t("audioConfig.asr.whisperLarge") },
+              { value: "aliyun", label: t("audioConfig.asr.aliyun") },
+            ]}
+            defaultValue="whisperBase"
+          />
         </div>
 
-        <div className={styles.ctl}>
-          <span className={styles.ctlLabel}>{t("audioConfig.field.mt")}</span>
-          <div className="select">
-            <select aria-label={t("audioConfig.field.mt")}>
-              <option>{t("audioConfig.mt.deepseek")}</option>
-              <option>{t("audioConfig.mt.localLlm")}</option>
-              <option>{t("audioConfig.mt.deepl")}</option>
-            </select>
-          </div>
+        <div className="flex flex-col gap-[7px]">
+          <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.mt")}</span>
+          <Select
+            ariaLabel={t("audioConfig.field.mt")}
+            options={[
+              { value: "deepseek", label: t("audioConfig.mt.deepseek") },
+              { value: "localLlm", label: t("audioConfig.mt.localLlm") },
+              { value: "deepl", label: t("audioConfig.mt.deepl") },
+            ]}
+            defaultValue="deepseek"
+          />
         </div>
 
-        <button
-          type="button"
-          className={`btn btn--primary btn--lg btn--block ${styles.startBtn}`}
+        <Button
+          variant="primary"
+          size="lg"
+          block
+          className="mt-1"
           disabled={!ready}
           aria-disabled={!ready}
           onClick={() => ready && setListening(true)}
@@ -174,15 +189,15 @@ export function AudioConfigWindow() {
               {t("audioConfig.start.idle")}
             </>
           )}
-        </button>
+        </Button>
 
         {ready ? (
-          <div className={styles.okNote}>
+          <div className="flex items-center gap-2 text-[12.5px] text-success font-510 animate-pop">
             <CheckIcon size={16} />
             {t("audioConfig.okNote")}
           </div>
         ) : null}
       </div>
-    </main>
+    </WindowShell>
   );
 }

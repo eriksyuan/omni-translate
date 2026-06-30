@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { GearIcon, MicIcon, OcrFrameIcon, TranslateIcon } from "@/windows/shared/icons";
+import { GearIcon, MicIcon, OcrFrameIcon, TranslateIcon } from "@/components/icons";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsrSettingsSection } from "./AsrSettingsSection";
 import { GeneralSettingsSection } from "./GeneralSettingsSection";
 import { MtSettingsSection } from "./MtSettingsSection";
 import { OcrSettingsSection } from "./OcrSettingsSection";
-import styles from "./preferences.module.css";
 
 const SECTIONS = ["general", "ocr", "asr", "mt"] as const;
 type PreferencesSection = (typeof SECTIONS)[number];
@@ -22,36 +22,40 @@ export function PreferencesWindow() {
   const [section, setSection] = useState<PreferencesSection>("general");
 
   return (
-    <div className={styles.shell}>
-      <aside className={styles.sidebar}>
-        <nav className={styles.nav} aria-label={t("preferences.title")} role="tablist">
+    <Tabs
+      value={section}
+      onValueChange={(v) => setSection(v as PreferencesSection)}
+      className="flex min-h-full win-shell"
+    >
+      <aside className="w-[210px] flex-none p-[14px_10px] bg-panel border-r-[0.5px] border-hairline">
+        <TabsList aria-label={t("preferences.title")} className="flex flex-col gap-[2px]">
           {SECTIONS.map((id) => {
             const TabIcon = TAB_ICON[id];
-            const active = section === id;
             return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                className={active ? styles.tabActive : styles.tab}
-                aria-selected={active}
-                onClick={() => setSection(id)}
-              >
-                <span className={styles.tico}>
+              <TabsTrigger key={id} value={id} className="group">
+                <span className="w-[26px] h-[26px] rounded-[7px] grid place-items-center flex-none bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-accent group-data-[state=active]:bg-white/22 group-data-[state=active]:text-white">
                   <TabIcon size={15} />
                 </span>
                 {t(`preferences.nav.${id}`)}
-              </button>
+              </TabsTrigger>
             );
           })}
-        </nav>
+        </TabsList>
       </aside>
-      <main className={styles.content}>
-        {section === "general" ? <GeneralSettingsSection /> : null}
-        {section === "ocr" ? <OcrSettingsSection /> : null}
-        {section === "asr" ? <AsrSettingsSection /> : null}
-        {section === "mt" ? <MtSettingsSection /> : null}
+      <main className="flex-1 min-w-0 p-[26px_30px] overflow-auto">
+        <TabsContent value="general" className="animate-fade">
+          <GeneralSettingsSection />
+        </TabsContent>
+        <TabsContent value="ocr" className="animate-fade">
+          <OcrSettingsSection />
+        </TabsContent>
+        <TabsContent value="asr" className="animate-fade">
+          <AsrSettingsSection />
+        </TabsContent>
+        <TabsContent value="mt" className="animate-fade">
+          <MtSettingsSection />
+        </TabsContent>
       </main>
-    </div>
+    </Tabs>
   );
 }

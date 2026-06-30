@@ -28,6 +28,15 @@
     "group": {
       "appearance": "外观与语言"
     },
+    "theme": {
+      "label": "主题",
+      "help": "选择浅色、深色或跟随系统外观，立即生效。",
+      "option": {
+        "light": "浅色",
+        "dark": "深色",
+        "system": "跟随系统"
+      }
+    },
     "language": {
       "label": "语言",
       "help": "切换界面显示语言，立即生效。",

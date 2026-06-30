@@ -1,9 +1,20 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import styles from "./preferences.module.css";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-row";
+import { Input } from "@/components/ui/input";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { SegmentedControl, SegmentedItem } from "@/components/ui/segmented-control";
+import { Select } from "@/components/ui/select";
 
 const MODELS = ["tiny", "base", "large"] as const;
 type WhisperModel = (typeof MODELS)[number];
+
+const ASR_ENGINE_OPTIONS = [
+  { value: "whisper", key: "asrSettings.engine.whisper" },
+  { value: "cloudAliyun", key: "asrSettings.engine.cloudAliyun" },
+  { value: "cloudTencent", key: "asrSettings.engine.cloudTencent" },
+] as const;
 
 export function AsrSettingsSection() {
   const { t } = useTranslation();
@@ -13,89 +24,87 @@ export function AsrSettingsSection() {
   const isWhisper = engine === "whisper";
 
   return (
-    <section className={styles.pane}>
-      <h2 className={styles.paneTitle}>{t("asrSettings.title")}</h2>
-      <p className={styles.paneSub}>{t("asrSettings.sub")}</p>
+    <section className="animate-fade">
+      <h2 className="text-[18px] font-[620]">{t("asrSettings.title")}</h2>
+      <p className="text-[13px] text-fg-2 mt-1.5 leading-[1.55]">{t("asrSettings.sub")}</p>
 
-      <div className={styles.group}>
-        <div className={styles.groupTitle}>{t("asrSettings.group.engine")}</div>
-        <div className={styles.formcard}>
-          <div className={styles.frow}>
-            <div className={styles.left}>
-              <div className="t">{t("asrSettings.engine.label")}</div>
-              <div className="d">{t("asrSettings.engine.help")}</div>
-            </div>
-            <div className={styles.ctl}>
-              <div className="select">
-                <select
-                  aria-label={t("asrSettings.engine.label")}
-                  value={engine}
-                  onChange={(e) => setEngine(e.target.value)}
-                >
-                  <option value="whisper">{t("asrSettings.engine.whisper")}</option>
-                  <option value="cloudAliyun">{t("asrSettings.engine.cloudAliyun")}</option>
-                  <option value="cloudTencent">{t("asrSettings.engine.cloudTencent")}</option>
-                </select>
+      <div className="mt-[22px]">
+        <div className="eyebrow mb-2.5">
+          {t("asrSettings.group.engine")}
+        </div>
+        <div className="formcard">
+          <FormField
+            label={t("asrSettings.engine.label")}
+            description={t("asrSettings.engine.help")}
+          >
+            <Select
+              ariaLabel={t("asrSettings.engine.label")}
+              value={engine}
+              onValueChange={setEngine}
+              options={ASR_ENGINE_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
+            />
+          </FormField>
+
+          <div
+            className={`max-h-0 overflow-hidden transition-[max-height] duration-300 ease-mac ${
+              isWhisper ? "max-h-[460px]" : ""
+            }`}
+          >
+            <FormField
+              label={t("asrSettings.model.label")}
+              description={t("asrSettings.model.help")}
+              controlClassName="flex justify-end"
+            >
+              <SegmentedControl
+                type="single"
+                aria-label={t("asrSettings.model.label")}
+                value={model}
+                onValueChange={(v: string) => {
+                  if (v) setModel(v as WhisperModel);
+                }}
+              >
+                {MODELS.map((m) => (
+                  <SegmentedItem key={m} value={m}>
+                    {t(`asrSettings.model.${m}`)}
+                  </SegmentedItem>
+                ))}
+              </SegmentedControl>
+            </FormField>
+
+            <FormField
+              stacked
+              label={t("asrSettings.manage.label")}
+              description={t("asrSettings.manage.file")}
+              controlClassName="w-full max-w-none mt-2"
+            >
+              <div className="flex items-center gap-2.5 mt-2.5">
+                <ProgressBar value={64} className="flex-1" />
+                <span className="font-mono text-[11px] text-fg-2">
+                  {t("asrSettings.manage.progress")}
+                </span>
               </div>
-            </div>
+              <Button className="mt-2.5 self-start">{t("asrSettings.manage.choose")}</Button>
+            </FormField>
           </div>
 
-          <div className={`${styles.reveal} ${isWhisper ? styles.revealOpen : ""}`}>
-            <div className={styles.frow}>
-              <div className={styles.left}>
-                <div className="t">{t("asrSettings.model.label")}</div>
-                <div className="d">{t("asrSettings.model.help")}</div>
-              </div>
-              <div className={styles.ctl} style={{ display: "flex", justifyContent: "flex-end" }}>
-                <div className={styles.segModels} role="group" aria-label={t("asrSettings.model.label")}>
-                  {MODELS.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      aria-pressed={model === m}
-                      onClick={() => setModel(m)}
-                    >
-                      {t(`asrSettings.model.${m}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className={`${styles.frow} ${styles.frowCol}`}>
-              <div className={styles.left} style={{ width: "100%" }}>
-                <div className="t">{t("asrSettings.manage.label")}</div>
-                <div className="d">{t("asrSettings.manage.file")}</div>
-                <div className={styles.dl}>
-                  <div className={styles.dlbar}>
-                    <i />
-                  </div>
-                  <span className={styles.pct}>{t("asrSettings.manage.progress")}</span>
-                </div>
-              </div>
-              <div className={styles.ctl} style={{ justifyContent: "flex-start" }}>
-                <button type="button" className="btn">
-                  {t("asrSettings.manage.choose")}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className={`${styles.reveal} ${!isWhisper ? styles.revealOpen : ""}`}>
-            <div className={styles.fieldRow}>
-              <label htmlFor="asrApiKey">{t("asrSettings.apiKey")}</label>
-              <input className="field" id="asrApiKey" type="password" placeholder="••••••••••••••••" />
+          <div
+            className={`max-h-0 overflow-hidden transition-[max-height] duration-300 ease-mac ${
+              !isWhisper ? "max-h-[460px]" : ""
+            }`}
+          >
+            <div className="field-row">
+              <label htmlFor="asrApiKey" className="text-[12.5px] font-[510] text-fg">
+                {t("asrSettings.apiKey")}
+              </label>
+              <Input id="asrApiKey" type="password" placeholder="••••••••••••••••" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className={styles.footbar}>
-        <button type="button" className="btn">
-          {t("preferences.action.reset")}
-        </button>
-        <button type="button" className="btn btn--primary">
-          {t("preferences.action.save")}
-        </button>
+      <div className="footbar">
+        <Button>{t("preferences.action.reset")}</Button>
+        <Button variant="primary">{t("preferences.action.save")}</Button>
       </div>
     </section>
   );

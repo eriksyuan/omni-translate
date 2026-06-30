@@ -28,6 +28,15 @@
     "group": {
       "appearance": "Appearance & Language"
     },
+    "theme": {
+      "label": "Theme",
+      "help": "Choose light, dark, or follow the system appearance. Applied immediately.",
+      "option": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "Follow System"
+      }
+    },
     "language": {
       "label": "Language",
       "help": "Switch the interface language, applied immediately.",

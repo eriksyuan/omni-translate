@@ -1,12 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import UnoCSS from "@unocss/vite";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [UnoCSS(), react()],
   resolve: {
     alias: {
       "@": path.resolve(rootDir, "./src"),
