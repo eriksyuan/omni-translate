@@ -189,7 +189,9 @@ impl AudioCaptureManager {
             Err(_) => return Err(CaptureError::ThreadStopped),
         }
 
-        let _ = runtime.emitter_thread.join();
+        // Detach instead of join: the emitter exits once sample_tx is dropped above, but
+        // joining would block stop if it is still flushing a Tauri event to the webview.
+        drop(runtime.emitter_thread);
 
         let status = AudioCaptureStatus {
             active: false,
@@ -301,7 +303,7 @@ where
 }
 
 fn emit_samples_loop(
-    app: AppHandle,
+    _app: AppHandle,
     sample_rx: Receiver<Vec<i16>>,
     status: Arc<Mutex<AudioCaptureStatus>>,
     pipeline_feed: Option<PipelineFeed>,
@@ -339,19 +341,9 @@ fn emit_samples_loop(
 
         sequence += 1;
         let sample_count = samples.len();
-        let payload = AudioChunkPayload {
-            sequence,
-            sample_rate,
-            channels,
-            samples,
-        };
 
         if let Ok(mut guard) = status.lock() {
             guard.chunks_emitted = sequence;
-        }
-
-        if app.emit(EVENT_AUDIO_CHUNK, payload).is_err() {
-            break;
         }
 
         if sequence == 1 || sequence.is_multiple_of(50) {

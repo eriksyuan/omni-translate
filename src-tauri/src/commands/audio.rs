@@ -5,7 +5,7 @@ use crate::audio::{
     AudioTranslationPipeline, MicrophonePermission, MtConfig, SpeechTranslateConfig,
 };
 use crate::platform::audio as platform_audio;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 #[tauri::command]
 pub fn list_audio_input_devices() -> Result<Vec<crate::audio::AudioInputDevice>, String> {
@@ -85,12 +85,16 @@ pub fn start_audio_session(
 }
 
 #[tauri::command]
-pub fn stop_audio_session(
-    app: AppHandle,
-    capture: State<'_, AudioCaptureManager>,
-    pipeline: State<'_, AudioTranslationPipeline>,
-) -> Result<AudioCaptureStatus, String> {
-    AudioSessionManager::stop(&app, &capture, &pipeline).map_err(|e| e.to_string())
+pub async fn stop_audio_session(app: AppHandle) -> Result<AudioCaptureStatus, String> {
+    // Stop joins capture/pipeline worker threads that emit Tauri events. Running on the
+    // main thread would deadlock when those threads call app.emit while invoke is pending.
+    tauri::async_runtime::spawn_blocking(move || {
+        let capture = app.state::<AudioCaptureManager>();
+        let pipeline = app.state::<AudioTranslationPipeline>();
+        AudioSessionManager::stop(&app, &capture, &pipeline).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("stop session task failed: {e}"))?
 }
 
 #[tauri::command]

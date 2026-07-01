@@ -109,7 +109,5 @@ export default defineConfig({
     "animate-nudge",
     "animate-fadein",
     "ocr-sel",
-    "subtitle-locked-text",
-    "subtitle-locked-hl",
   ],
 });

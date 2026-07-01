@@ -97,6 +97,7 @@
       "asr": "ASR Engine",
       "mt": "Translation Engine",
       "speechTranslate": "Speech translation engine",
+      "speechLanguagePair": "Translation languages",
       "speechSource": "Source language",
       "speechSourceHelp": "Match the spoken audio; choose auto-detect for mixed Chinese/English.",
       "speechTarget": "Target language",
@@ -188,12 +189,8 @@
     "recognizing": "Recognizing…"
   },
   "subtitle": {
-    "original": "Welcome to the future of AI translation.",
-    "tokens": "Welcome to|*AI translation|of the future.",
-    "lock": "Lock / Click-through",
-    "opacity": "Background opacity",
     "close": "Close",
-    "clickthrough": "Click through to the app behind"
+    "waiting": "Waiting for subtitles…"
   },
   "ocrSettings": {
     "title": "OCR Service Settings",

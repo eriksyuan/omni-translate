@@ -18,6 +18,7 @@
     "core:window:allow-is-visible",
     "core:window:allow-get-all-windows",
     "core:window:allow-start-dragging",
+    "core:window:allow-start-resize-dragging",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-ignore-cursor-events",
     "core:window:allow-set-size",

@@ -97,6 +97,7 @@
       "asr": "ASR 引擎",
       "mt": "翻译引擎",
       "speechTranslate": "语音翻译引擎",
+      "speechLanguagePair": "翻译语言",
       "speechSource": "源语言",
       "speechSourceHelp": "与采集音频语言一致；不确定时可选「自动识别（中英混合）」。",
       "speechTarget": "目标语言",
@@ -188,12 +189,8 @@
     "recognizing": "识别中…"
   },
   "subtitle": {
-    "original": "Welcome to the future of AI translation.",
-    "tokens": "欢迎来到|*AI 翻译|的未来。",
-    "lock": "锁定 / 鼠标穿透",
-    "opacity": "背景透明度",
     "close": "关闭",
-    "clickthrough": "点击穿透至背后应用"
+    "waiting": "等待字幕…"
   },
   "ocrSettings": {
     "title": "OCR 服务设置",

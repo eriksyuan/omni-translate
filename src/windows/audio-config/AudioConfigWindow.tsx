@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
+  ArrowRightIcon,
   CheckIcon,
   CircleCheckIcon,
   MicIcon,
@@ -47,7 +48,7 @@ import {
   type TencentSpeechSource,
   type TencentSpeechTarget,
 } from "@/lib/settings";
-import { showWindow } from "@/lib/tauri";
+import { hideWindow, showWindow } from "@/lib/tauri";
 import { WINDOW_LABELS } from "@/lib/windows";
 import { useAudioEnvironment } from "@/windows/audio-config/useAudioEnvironment";
 import { useAudioSessionProviders } from "@/windows/audio-config/useAudioSessionProviders";
@@ -139,6 +140,7 @@ export function AudioConfigWindow() {
       if (listening) {
         const status = await stopAudioSession();
         setListening(status.active);
+        await hideWindow(WINDOW_LABELS.SUBTITLE).catch(() => undefined);
         return;
       }
 
@@ -320,6 +322,7 @@ export function AudioConfigWindow() {
     speechTarget === AUTO_DETECT_LANGUAGE_PAIR.target
       ? "auto"
       : speechSource;
+  const isAutoDetectPair = speechSourceSelectValue === "auto";
 
   return (
     <WindowShell>
@@ -547,30 +550,29 @@ export function AudioConfigWindow() {
         )}
 
         {mode === "integrated" && hasVerifiedSpeech ? (
-          <>
-            <div className="flex flex-col gap-[7px]">
-              <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.speechSource")}</span>
+          <div className="flex flex-col gap-[7px]">
+            <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.speechLanguagePair")}</span>
+            <div className="flex items-center gap-2">
               <Select
+                className="min-w-0 flex-1"
                 ariaLabel={t("audioConfig.field.speechSource")}
                 options={speechSourceOptions}
                 value={speechSourceSelectValue}
                 onValueChange={handleSpeechSourceChange}
                 disabled={listening}
               />
-              <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.speechSourceHelp")}</p>
-            </div>
-
-            <div className="flex flex-col gap-[7px]">
-              <span className="text-[12px] font-510 text-fg-2">{t("audioConfig.field.speechTarget")}</span>
+              <ArrowRightIcon size={14} className="flex-none text-fg-3" aria-hidden />
               <Select
+                className="min-w-0 flex-1"
                 ariaLabel={t("audioConfig.field.speechTarget")}
                 options={speechTargetOptions}
                 value={speechTarget}
                 onValueChange={handleSpeechTargetChange}
-                disabled={listening}
+                disabled={listening || isAutoDetectPair}
               />
             </div>
-          </>
+            <p className="text-[11.5px] text-fg-3">{t("audioConfig.field.speechSourceHelp")}</p>
+          </div>
         ) : null}
 
         {error ? (

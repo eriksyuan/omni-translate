@@ -411,8 +411,6 @@ pub fn run_integrated_worker(
     if stop_requested {
         if let Err(err) = TencentSpeechTranslateSession::send_end(&mut socket) {
             log_warn!("speech", "send_end on stop failed: {err}");
-        } else {
-            let _ = drain_ws_until_final(&app, &mut socket, Instant::now() + STOP_DRAIN_TIMEOUT);
         }
         let _ = socket.close(None);
         return;
