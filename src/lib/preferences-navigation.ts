@@ -11,7 +11,7 @@ const PREFERENCES_SECTION_KEY = "omnitranslate:preferences:section";
 
 export function readPendingPreferencesSection(): PreferencesSection | null {
   const value = localStorage.getItem(PREFERENCES_SECTION_KEY);
-  if (value === "general" || value === "ocr" || value === "asr" || value === "mt") {
+  if (value === "general" || value === "ocr" || value === "asr" || value === "mt" || value === "speechTranslate") {
     return value;
   }
   return null;

@@ -17,6 +17,7 @@ import {
   type MtTraditionalProvider,
   type TestState,
 } from "@/lib/settings";
+import { testMtConnection } from "@/lib/audio";
 
 const MT_PROVIDER_OPTIONS = [
   { value: "google", label: "Google Translate" },
@@ -88,16 +89,25 @@ export function MtSettingsSection() {
     setTraditionalTest("testing");
     if (traditionalTimer.current) clearTimeout(traditionalTimer.current);
 
-    const valid = mtApiKey.trim().length > 0;
-    traditionalTimer.current = setTimeout(() => {
-      if (!valid) {
+    if (mtApiKey.trim().length === 0) {
+      setTraditionalTest("error");
+      return;
+    }
+
+    persistTraditional();
+
+    void testMtConnection({
+      kind: "traditional",
+      provider: mtProvider,
+      apiKey: mtApiKey,
+    })
+      .then(() => {
+        markMtVerified(traditionalProfileId);
+        setTraditionalTest("ok");
+      })
+      .catch(() => {
         setTraditionalTest("error");
-        return;
-      }
-      persistTraditional();
-      markMtVerified(traditionalProfileId);
-      setTraditionalTest("ok");
-    }, 800);
+      });
   };
 
   const runLlmTest = () => {
@@ -107,15 +117,27 @@ export function MtSettingsSection() {
     const valid =
       baseUrl.trim().length > 0 && model.trim().length > 0 && llmApiKey.trim().length > 0;
 
-    llmTimer.current = setTimeout(() => {
-      if (!valid) {
+    if (!valid) {
+      setLlmTest("error");
+      return;
+    }
+
+    persistLlm();
+
+    void testMtConnection({
+      kind: "llm",
+      baseUrl,
+      apiKey: llmApiKey,
+      model,
+      prompt,
+    })
+      .then(() => {
+        markMtVerified(llmProfileId);
+        setLlmTest("ok");
+      })
+      .catch(() => {
         setLlmTest("error");
-        return;
-      }
-      persistLlm();
-      markMtVerified(llmProfileId);
-      setLlmTest("ok");
-    }, 800);
+      });
   };
 
   useEffect(() => {

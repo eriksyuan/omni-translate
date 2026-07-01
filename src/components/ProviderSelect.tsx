@@ -3,7 +3,7 @@ import { SelectContent, SelectItem, SelectRoot, SelectTrigger, SelectValue } fro
 import { openPreferencesSection } from "@/lib/preferences-navigation";
 import { CONFIGURE_SENTINEL } from "@/lib/settings";
 import type { ProviderKind } from "@/lib/settings/types";
-import type { VerifiedProviderOption } from "@/windows/audio-config/useVerifiedProviders";
+import type { VerifiedProviderOption } from "@/windows/audio-config/useAudioSessionProviders";
 
 interface ProviderSelectProps {
   kind: ProviderKind;
@@ -25,7 +25,8 @@ export function ProviderSelect({
   emptyPlaceholder,
 }: ProviderSelectProps) {
   const { t } = useTranslation();
-  const preferencesSection = kind === "asr" ? "asr" : "mt";
+  const preferencesSection =
+    kind === "asr" ? "asr" : kind === "mt" ? "mt" : "speechTranslate";
 
   const handleChange = (next: string) => {
     if (next === CONFIGURE_SENTINEL) {

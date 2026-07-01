@@ -1,6 +1,17 @@
 export type AsrEngine = "whisper" | "cloudAliyun" | "cloudTencent";
 export type WhisperModel = "tiny" | "base" | "large";
 export type MtTraditionalProvider = "google" | "deepl";
+export type AudioTranslationMode = "modular" | "integrated";
+export type TencentTransModel = "hunyuan-translation-lite" | "hunyuan-translation";
+export type TencentSpeechDomain = 1 | 2 | 3;
+
+import type {
+  TencentLanguagePair,
+  TencentSpeechSource,
+  TencentSpeechTarget,
+} from "@/lib/settings/tencent-speech-languages";
+
+export type { TencentLanguagePair, TencentSpeechSource, TencentSpeechTarget };
 
 export type AsrProfileId =
   | "asr:whisper:tiny"
@@ -11,9 +22,11 @@ export type AsrProfileId =
 
 export type MtProfileId = `mt:traditional:${MtTraditionalProvider}` | `mt:llm:${string}`;
 
-export type ProviderProfileId = AsrProfileId | MtProfileId;
-export type ProviderKind = "asr" | "mt";
-export type PreferencesSection = "general" | "ocr" | "asr" | "mt";
+export type SpeechTranslateProfileId = "speech:tencent:realtime";
+
+export type ProviderProfileId = AsrProfileId | MtProfileId | SpeechTranslateProfileId;
+export type ProviderKind = "asr" | "mt" | "speechTranslate";
+export type PreferencesSection = "general" | "ocr" | "asr" | "mt" | "speechTranslate";
 
 export interface AsrWhisperProfileConfig {
   kind: "whisper";
@@ -24,7 +37,15 @@ export interface AsrWhisperProfileConfig {
 export interface AsrCloudProfileConfig {
   kind: "cloud";
   engine: "cloudAliyun" | "cloudTencent";
-  apiKey: string;
+  /** Combined credential string sent to Rust (also derived from structured fields). */
+  apiKey?: string;
+  /** Aliyun NLS AppKey */
+  appKey?: string;
+  accessKeyId?: string;
+  accessKeySecret?: string;
+  /** Tencent Cloud */
+  secretId?: string;
+  secretKey?: string;
 }
 
 export type AsrProfileConfig = AsrWhisperProfileConfig | AsrCloudProfileConfig;
@@ -45,9 +66,28 @@ export interface MtLlmProfileConfig {
 
 export type MtProfileConfig = MtTraditionalProfileConfig | MtLlmProfileConfig;
 
+/** Service profile: credentials + engine tuning (no language pair). */
+export interface TencentSpeechTranslateConfig {
+  kind: "speechTranslate";
+  provider: "tencentRealtime";
+  appId: string;
+  secretId: string;
+  secretKey: string;
+  transModel: TencentTransModel;
+  hotwordList?: string;
+  noiseThreshold?: number;
+  domain?: TencentSpeechDomain;
+}
+
+export type SpeechTranslateProfileConfig = TencentSpeechTranslateConfig;
+
 export interface AudioSessionSelection {
+  mode?: AudioTranslationMode;
   asrId?: AsrProfileId;
   mtId?: MtProfileId;
+  speechTranslateId?: SpeechTranslateProfileId;
+  speechSource?: TencentSpeechSource;
+  speechTarget?: TencentSpeechTarget;
 }
 
 export interface SettingsStore {
@@ -58,6 +98,10 @@ export interface SettingsStore {
   mt: {
     profiles: Partial<Record<string, MtProfileConfig>>;
     verified: MtProfileId[];
+  };
+  speechTranslate: {
+    profiles: Partial<Record<SpeechTranslateProfileId, SpeechTranslateProfileConfig>>;
+    verified: SpeechTranslateProfileId[];
   };
   audioSession: AudioSessionSelection;
 }

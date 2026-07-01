@@ -1,9 +1,11 @@
 use crate::audio::{
-    blackhole_installed, list_input_devices, AudioCaptureManager, AudioCaptureStatus,
-    AudioEnvironmentStatus, AudioSourceKind, MicrophonePermission,
+    blackhole_installed, list_input_devices, test_asr_connection, test_mt_connection,
+    test_speech_translate_connection, AsrConfig, AudioCaptureManager, AudioCaptureStatus,
+    AudioEnvironmentStatus, AudioSessionConfig, AudioSessionManager, AudioSourceKind,
+    AudioTranslationPipeline, MicrophonePermission, MtConfig, SpeechTranslateConfig,
 };
 use crate::platform::audio as platform_audio;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 #[tauri::command]
 pub fn list_audio_input_devices() -> Result<Vec<crate::audio::AudioInputDevice>, String> {
@@ -44,9 +46,11 @@ pub fn start_audio_capture(
     app: AppHandle,
     capture: State<'_, AudioCaptureManager>,
     source: AudioSourceKind,
+    device_id: Option<String>,
 ) -> Result<AudioCaptureStatus, String> {
-    let status = capture.start(app.clone(), source).map_err(|e| e.to_string())?;
-    crate::audio::emit_capture_state(&app, &status);
+    let status = capture
+        .start(app.clone(), source, device_id, None)
+        .map_err(|e| e.to_string())?;
     Ok(status)
 }
 
@@ -58,4 +62,60 @@ pub fn stop_audio_capture(
     let status = capture.stop().map_err(|e| e.to_string())?;
     crate::audio::emit_capture_state(&app, &status);
     Ok(status)
+}
+
+#[tauri::command]
+pub fn start_audio_session(
+    app: AppHandle,
+    capture: State<'_, AudioCaptureManager>,
+    pipeline: State<'_, AudioTranslationPipeline>,
+    source: AudioSourceKind,
+    device_id: Option<String>,
+    session_config: AudioSessionConfig,
+) -> Result<AudioCaptureStatus, String> {
+    AudioSessionManager::start(
+        &app,
+        &capture,
+        &pipeline,
+        source,
+        device_id,
+        session_config,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn stop_audio_session(app: AppHandle) -> Result<AudioCaptureStatus, String> {
+    // Stop joins capture/pipeline worker threads that emit Tauri events. Running on the
+    // main thread would deadlock when those threads call app.emit while invoke is pending.
+    tauri::async_runtime::spawn_blocking(move || {
+        let capture = app.state::<AudioCaptureManager>();
+        let pipeline = app.state::<AudioTranslationPipeline>();
+        AudioSessionManager::stop(&app, &capture, &pipeline).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("stop session task failed: {e}"))?
+}
+
+#[tauri::command]
+pub async fn test_asr_connection_cmd(asr_config: AsrConfig) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || test_asr_connection(&asr_config))
+        .await
+        .map_err(|e| format!("asr test task failed: {e}"))?
+}
+
+#[tauri::command]
+pub async fn test_mt_connection_cmd(mt_config: MtConfig) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || test_mt_connection(&mt_config))
+        .await
+        .map_err(|e| format!("mt test task failed: {e}"))?
+}
+
+#[tauri::command]
+pub async fn test_speech_translate_connection_cmd(
+    speech_config: SpeechTranslateConfig,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || test_speech_translate_connection(&speech_config))
+        .await
+        .map_err(|e| format!("speech translate test task failed: {e}"))?
 }
