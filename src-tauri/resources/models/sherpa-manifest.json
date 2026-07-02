@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "models": {
+    "zipformer-en-20m": {
+      "version": "v1",
+      "labelKey": "asrSettings.sherpa.model.small",
+      "sizeBytes": 127887156,
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-20M-2023-02-17.tar.bz2",
+      "sha256": "9c559283e8498d3fe95913c79ca1cb454bb26281ac2b102b41306c7d752765d9",
+      "archiveRoot": "sherpa-onnx-streaming-zipformer-en-20M-2023-02-17",
+      "files": {
+        "tokens": "tokens.txt",
+        "encoder": "encoder-epoch-99-avg-1.onnx",
+        "decoder": "decoder-epoch-99-avg-1.onnx",
+        "joiner": "joiner-epoch-99-avg-1.onnx"
+      }
+    },
+    "zipformer-en-full": {
+      "version": "v1",
+      "labelKey": "asrSettings.sherpa.model.full",
+      "sizeBytes": 310414022,
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-06-26.tar.bz2",
+      "sha256": "639e25b578e9e997131402199419c13a941f8e4e198e2da1ce57dbf5cf401282",
+      "archiveRoot": "sherpa-onnx-streaming-zipformer-en-2023-06-26",
+      "files": {
+        "tokens": "tokens.txt",
+        "encoder": "encoder-epoch-99-avg-1-chunk-16-left-128.onnx",
+        "decoder": "decoder-epoch-99-avg-1-chunk-16-left-128.onnx",
+        "joiner": "joiner-epoch-99-avg-1-chunk-16-left-128.onnx"
+      }
+    }
+  }
+}

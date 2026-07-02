@@ -98,8 +98,8 @@ pub async fn stop_audio_session(app: AppHandle) -> Result<AudioCaptureStatus, St
 }
 
 #[tauri::command]
-pub async fn test_asr_connection_cmd(asr_config: AsrConfig) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || test_asr_connection(&asr_config))
+pub async fn test_asr_connection_cmd(app: AppHandle, asr_config: AsrConfig) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || test_asr_connection(&app, &asr_config))
         .await
         .map_err(|e| format!("asr test task failed: {e}"))?
 }

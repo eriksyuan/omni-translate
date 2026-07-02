@@ -1,24 +1,40 @@
 use super::types::{TARGET_CHANNELS, TARGET_SAMPLE_RATE};
 
-/// Fixed analysis window length in seconds (Phase 1 — no VAD).
+/// Fixed analysis window length in seconds (batch ASR — Whisper / cloud).
 pub const WINDOW_SECONDS: f64 = 2.5;
+
+/// Low-latency streaming window for Sherpa sidecar.
+pub const STREAMING_WINDOW_SECONDS: f64 = 0.5;
 
 pub const WINDOW_SAMPLES: usize =
     (TARGET_SAMPLE_RATE as f64 * WINDOW_SECONDS) as usize;
+
+pub const STREAMING_WINDOW_SAMPLES: usize =
+    (TARGET_SAMPLE_RATE as f64 * STREAMING_WINDOW_SECONDS) as usize;
 
 /// Accumulates interleaved PCM, resamples to 16 kHz mono, emits fixed windows.
 pub struct PcmWindowBuffer {
     pending: Vec<i16>,
     sample_rate: u32,
     channels: u16,
+    window_samples: usize,
 }
 
 impl PcmWindowBuffer {
     pub fn new(sample_rate: u32, channels: u16) -> Self {
+        Self::with_window_seconds(WINDOW_SECONDS, sample_rate, channels)
+    }
+
+    pub fn streaming(sample_rate: u32, channels: u16) -> Self {
+        Self::with_window_seconds(STREAMING_WINDOW_SECONDS, sample_rate, channels)
+    }
+
+    pub fn with_window_seconds(window_seconds: f64, sample_rate: u32, channels: u16) -> Self {
         Self {
             pending: Vec::new(),
             sample_rate,
             channels,
+            window_samples: (TARGET_SAMPLE_RATE as f64 * window_seconds) as usize,
         }
     }
 
@@ -41,8 +57,8 @@ impl PcmWindowBuffer {
         self.pending.extend_from_slice(&resampled);
 
         let mut windows = Vec::new();
-        while self.pending.len() >= WINDOW_SAMPLES {
-            let window: Vec<i16> = self.pending.drain(..WINDOW_SAMPLES).collect();
+        while self.pending.len() >= self.window_samples {
+            let window: Vec<i16> = self.pending.drain(..self.window_samples).collect();
             windows.push(window);
         }
         windows

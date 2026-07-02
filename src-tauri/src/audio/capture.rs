@@ -22,7 +22,10 @@ const EVENT_AUDIO_ERROR: &str = "audio://error";
 const EVENT_AUDIO_STATE: &str = "audio://state";
 
 pub enum PipelineFeed {
-    Modular(Sender<Vec<i16>>),
+    Modular {
+        tx: Sender<Vec<i16>>,
+        streaming: bool,
+    },
     Integrated(Sender<IntegratedPcmInput>),
 }
 
@@ -309,9 +312,16 @@ fn emit_samples_loop(
     pipeline_feed: Option<PipelineFeed>,
 ) {
     let mut sequence = 0_u64;
-    let mut window_buffer = PcmWindowBuffer::new(0, 1);
+    let mut window_buffer = if matches!(
+        pipeline_feed,
+        Some(PipelineFeed::Modular { streaming: true, .. })
+    ) {
+        PcmWindowBuffer::streaming(0, 1)
+    } else {
+        PcmWindowBuffer::new(0, 1)
+    };
     let (modular_tx, integrated_tx) = match pipeline_feed {
-        Some(PipelineFeed::Modular(tx)) => (Some(tx), None),
+        Some(PipelineFeed::Modular { tx, .. }) => (Some(tx), None),
         Some(PipelineFeed::Integrated(tx)) => (None, Some(tx)),
         None => (None, None),
     };

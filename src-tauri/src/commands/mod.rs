@@ -1,5 +1,6 @@
 pub mod audio;
 pub mod logging;
+pub mod models;
 
 use crate::platform;
 use crate::{i18n, tray};

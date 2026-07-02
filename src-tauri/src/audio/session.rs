@@ -43,8 +43,11 @@ impl AudioSessionManager {
             return Err(err.into());
         }
 
-        let pipeline_feed = match pipeline.modular_chunk_sender() {
-            Some(chunk_tx) => PipelineFeed::Modular(chunk_tx),
+        let pipeline_feed = match pipeline.modular_feed() {
+            Some(feed) => PipelineFeed::Modular {
+                tx: feed.tx,
+                streaming: feed.streaming,
+            },
             None => {
                 let pcm_tx = pipeline
                     .integrated_pcm_sender()

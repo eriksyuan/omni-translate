@@ -7,6 +7,7 @@
     "dev": "pnpm i18n:prepare && vite",
     "build": "pnpm i18n:prepare && pnpm typecheck && vite build",
     "preview": "vite preview",
+    "fetch-sherpa-sidecar": "bash scripts/fetch-sherpa-sidecar.sh",
     "tauri": "tauri",
     "i18n:validate": "node scripts/i18n/validate.mjs",
     "i18n:sync": "node scripts/i18n/sync.mjs",

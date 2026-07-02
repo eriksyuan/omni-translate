@@ -61,13 +61,37 @@ describe("applySubtitleUpdate", () => {
     expect(second[1]?.id).toBe("sid-2");
   });
 
-  it("ignores empty payloads", () => {
-    expect(
-      applySubtitleUpdate([], {
-        original: "  ",
-        translation: "",
-        sentenceEnd: false,
-      }),
-    ).toEqual([]);
+  it("ignores stale partial updates after entry is final", () => {
+    const final = applySubtitleUpdate([], {
+      original: "Hello",
+      translation: "你好",
+      sentenceId: "sid-1",
+      sentenceEnd: true,
+    });
+    const stale = applySubtitleUpdate(final, {
+      original: "Hello world",
+      translation: "你好世界",
+      sentenceId: "sid-1",
+      sentenceEnd: false,
+    });
+    expect(stale).toEqual(final);
+  });
+
+  it("appends a new entry when sentenceId advances after final", () => {
+    const first = applySubtitleUpdate([], {
+      original: "Hello",
+      translation: "你好",
+      sentenceId: "sid-1",
+      sentenceEnd: true,
+    });
+    const second = applySubtitleUpdate(first, {
+      original: "World",
+      translation: "世界",
+      sentenceId: "sid-2",
+      sentenceEnd: false,
+    });
+    expect(second).toHaveLength(2);
+    expect(second[0]?.final).toBe(true);
+    expect(second[1]?.id).toBe("sid-2");
   });
 });

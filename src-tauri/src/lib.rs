@@ -1,5 +1,6 @@
 mod audio;
 mod commands;
+mod assets;
 mod i18n;
 mod logging;
 mod platform;
@@ -40,6 +41,14 @@ pub fn run() {
             commands::audio::test_asr_connection_cmd,
             commands::audio::test_mt_connection_cmd,
             commands::audio::test_speech_translate_connection_cmd,
+            commands::models::get_sherpa_model_status,
+            commands::models::list_sherpa_model_statuses,
+            commands::models::get_sherpa_model_folder,
+            commands::models::download_sherpa_model,
+            commands::models::pause_sherpa_model_download,
+            commands::models::resume_sherpa_model_download,
+            commands::models::delete_sherpa_model,
+            commands::models::ensure_sherpa_model,
             commands::logging::get_recent_logs,
             commands::logging::get_log_file_path,
             commands::logging::clear_recent_logs,

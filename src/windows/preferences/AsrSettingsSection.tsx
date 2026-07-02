@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { CheckIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-row";
@@ -9,7 +10,18 @@ import { SegmentedControl, SegmentedItem } from "@/components/ui/segmented-contr
 import { Select } from "@/components/ui/select";
 import { testAsrConnection } from "@/lib/audio";
 import {
+  formatDownloadProgress,
+  formatModelSize,
+  listSherpaModelStatuses,
+  progressPercent,
+  SHERPA_MODELS,
+  type DownloadPhase,
+  type SherpaModelStatus,
+} from "@/lib/models/sherpa";
+import { useSherpaModelDownloads } from "@/lib/models/useSherpaModelDownloads";
+import {
   asrProfileIdForEngine,
+  asrProfileIdForSherpa,
   asrProfileIdForWhisper,
   buildAliyunCloudProfile,
   buildTencentCloudProfile,
@@ -24,41 +36,72 @@ import {
   toRustAsrConfig,
   type AsrEngine,
   type AsrProfileId,
+  type SherpaModel,
   type TestState,
   type WhisperModel,
 } from "@/lib/settings";
 
-const MODELS = ["tiny", "base", "large"] as const;
+const WHISPER_MODELS = ["tiny", "base", "large"] as const;
 
 const ASR_ENGINE_OPTIONS = [
-  { value: "whisper", key: "asrSettings.engine.whisper" },
+  { value: "sherpa", key: "asrSettings.engine.sherpa" },
   { value: "cloudAliyun", key: "asrSettings.engine.cloudAliyun" },
   { value: "cloudTencent", key: "asrSettings.engine.cloudTencent" },
+  { value: "whisper", key: "asrSettings.engine.whisper" },
 ] as const;
 
 const EMPTY_ALIYUN = { appKey: "", accessKeyId: "", accessKeySecret: "" };
 const EMPTY_TENCENT = { secretId: "", secretKey: "" };
 
-function currentProfileId(engine: AsrEngine, model: WhisperModel): AsrProfileId {
-  return engine === "whisper" ? asrProfileIdForWhisper(model) : asrProfileIdForEngine(engine);
+function currentProfileId(
+  engine: AsrEngine,
+  whisperModel: WhisperModel,
+  sherpaModel: SherpaModel,
+): AsrProfileId {
+  if (engine === "whisper") return asrProfileIdForWhisper(whisperModel);
+  if (engine === "sherpa") return asrProfileIdForSherpa(sherpaModel);
+  return asrProfileIdForEngine(engine);
+}
+
+function sherpaPhaseLabel(t: TFunction, phase: DownloadPhase): string {
+  switch (phase) {
+    case "downloading":
+      return t("asrSettings.sherpa.manage.downloading");
+    case "paused":
+      return t("asrSettings.sherpa.phase.paused");
+    case "verifying":
+      return t("asrSettings.sherpa.phase.verifying");
+    case "extracting":
+      return t("asrSettings.sherpa.phase.extracting");
+    case "installed":
+      return t("asrSettings.manage.ready");
+    case "error":
+      return t("asrSettings.sherpa.phase.error");
+    default:
+      return t("asrSettings.sherpa.manage.notInstalled");
+  }
 }
 
 export function AsrSettingsSection() {
   const { t } = useTranslation();
-  const [engine, setEngine] = useState<AsrEngine>("whisper");
-  const [model, setModel] = useState<WhisperModel>("base");
+  const [engine, setEngine] = useState<AsrEngine>("sherpa");
+  const [whisperModel, setWhisperModel] = useState<WhisperModel>("base");
+  const [sherpaModel, setSherpaModel] = useState<SherpaModel>("zipformer-en-20m");
   const [modelPath, setModelPath] = useState("");
   const [aliyun, setAliyun] = useState(EMPTY_ALIYUN);
   const [tencent, setTencent] = useState(EMPTY_TENCENT);
   const [test, setTest] = useState<TestState>("idle");
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const profileId = currentProfileId(engine, model);
+  const profileId = currentProfileId(engine, whisperModel, sherpaModel);
+  const isSherpa = engine === "sherpa";
   const isWhisper = engine === "whisper";
   const isAliyun = engine === "cloudAliyun";
   const isTencent = engine === "cloudTencent";
+
+  const { statusByModel, refresh, download, pause, resume, openFolder } = useSherpaModelDownloads(isSherpa);
+  const modelStatus: SherpaModelStatus | undefined = statusByModel[sherpaModel];
 
   useEffect(() => {
     const savedProfile = getAsrProfile(profileId);
@@ -72,8 +115,15 @@ export function AsrSettingsSection() {
       return;
     }
 
+    if (savedProfile.kind === "sherpa") {
+      setSherpaModel(savedProfile.model);
+      setAliyun(EMPTY_ALIYUN);
+      setTencent(EMPTY_TENCENT);
+      return;
+    }
+
     if (savedProfile.kind === "whisper") {
-      setModel(savedProfile.model);
+      setWhisperModel(savedProfile.model);
       setModelPath(savedProfile.modelPath);
       setAliyun(EMPTY_ALIYUN);
       setTencent(EMPTY_TENCENT);
@@ -95,9 +145,14 @@ export function AsrSettingsSection() {
     setEngine(next as AsrEngine);
   };
 
-  const handleModelChange = (next: WhisperModel) => {
+  const handleWhisperModelChange = (next: WhisperModel) => {
     invalidateVerification(profileId);
-    setModel(next);
+    setWhisperModel(next);
+  };
+
+  const handleSherpaModelChange = (next: SherpaModel) => {
+    invalidateVerification(profileId);
+    setSherpaModel(next);
   };
 
   const handleModelPathChange = (value: string) => {
@@ -121,8 +176,11 @@ export function AsrSettingsSection() {
   };
 
   const buildCurrentProfile = () => {
+    if (isSherpa) {
+      return { kind: "sherpa" as const, model: sherpaModel };
+    }
     if (isWhisper) {
-      return { kind: "whisper" as const, model, modelPath };
+      return { kind: "whisper" as const, model: whisperModel, modelPath };
     }
     if (isAliyun) {
       return buildAliyunCloudProfile(aliyun);
@@ -146,34 +204,65 @@ export function AsrSettingsSection() {
     savedTimer.current = setTimeout(() => setSaved(false), 2200);
   };
 
+  const handleDownloadModel = () => {
+    void download(sherpaModel).catch(() => undefined);
+  };
+
+  const handlePauseModel = () => {
+    void pause(sherpaModel).catch(() => undefined);
+  };
+
+  const handleResumeModel = () => {
+    void resume(sherpaModel).catch(() => undefined);
+  };
+
+  const handleOpenModelFolder = () => {
+    void openFolder(sherpaModel).catch(() => undefined);
+  };
+
   const runTest = () => {
     setTest("testing");
-    if (timer.current) clearTimeout(timer.current);
 
-    const valid = isWhisper ? modelPath.trim().length > 0 : isCloudConfigComplete();
-    if (!valid) {
-      setTest("error");
-      return;
-    }
+    void (async () => {
+      if (isSherpa) {
+        await refresh();
+        const statuses = await listSherpaModelStatuses();
+        const current = statuses.find((s) => s.modelId === sherpaModel);
+        if (current?.installed !== true) {
+          setTest("error");
+          return;
+        }
+      } else if (isWhisper) {
+        if (modelPath.trim().length === 0) {
+          setTest("error");
+          return;
+        }
+      } else if (!isCloudConfigComplete()) {
+        setTest("error");
+        return;
+      }
 
-    persistCurrent();
-    flashSaved();
+      persistCurrent();
+      flashSaved();
 
-    void testAsrConnection(toRustAsrConfig(buildCurrentProfile()))
-      .then(() => {
+      try {
+        await testAsrConnection(toRustAsrConfig(buildCurrentProfile()));
         markAsrVerified(profileId);
         setTest("ok");
-      })
-      .catch(() => {
+      } catch {
         setTest("error");
-      });
+      }
+    })();
   };
 
   const handleSave = () => {
+    if (isSherpa && modelStatus?.installed !== true) {
+      return;
+    }
     if (isWhisper && modelPath.trim().length === 0) {
       return;
     }
-    if (!isWhisper && !isCloudConfigComplete()) {
+    if (!isSherpa && !isWhisper && !isCloudConfigComplete()) {
       return;
     }
     persistCurrent();
@@ -182,10 +271,17 @@ export function AsrSettingsSection() {
 
   useEffect(() => {
     return () => {
-      if (timer.current) clearTimeout(timer.current);
       if (savedTimer.current) clearTimeout(savedTimer.current);
     };
   }, []);
+
+  const sherpaProgress = modelStatus ? progressPercent(modelStatus) : 0;
+  const sherpaProgressText = modelStatus
+    ? formatDownloadProgress(modelStatus.downloadedBytes, modelStatus.sizeBytes)
+    : "";
+  const isSherpaDownloading = modelStatus?.phase === "downloading";
+  const isSherpaPaused = modelStatus?.phase === "paused" || (modelStatus?.resumable && !modelStatus.installed);
+  const isSherpaInstalled = modelStatus?.installed === true;
 
   return (
     <section className="animate-fade">
@@ -204,6 +300,71 @@ export function AsrSettingsSection() {
             />
           </FormField>
 
+          {isSherpa ? (
+            <>
+              <FormField
+                label={t("asrSettings.model.label")}
+                description={t("asrSettings.sherpa.model.help")}
+                controlClassName="flex justify-end"
+              >
+                <SegmentedControl
+                  type="single"
+                  aria-label={t("asrSettings.model.label")}
+                  value={sherpaModel}
+                  onValueChange={(v: string) => {
+                    if (v) handleSherpaModelChange(v as SherpaModel);
+                  }}
+                >
+                  {SHERPA_MODELS.map((m) => (
+                    <SegmentedItem key={m} value={m}>
+                      {t(`asrSettings.sherpa.model.${m === "zipformer-en-20m" ? "small" : "full"}`)}
+                    </SegmentedItem>
+                  ))}
+                </SegmentedControl>
+              </FormField>
+
+              <FormField
+                stacked
+                label={t("asrSettings.manage.label")}
+                description={
+                  modelStatus
+                    ? t("asrSettings.sherpa.manage.size", {
+                        size: formatModelSize(modelStatus.sizeBytes),
+                      })
+                    : t("asrSettings.sherpa.manage.pending")
+                }
+                controlClassName="w-full max-w-none mt-2"
+              >
+                <div className="flex items-center gap-2.5 mt-2.5">
+                  <ProgressBar value={sherpaProgress} className="flex-1" />
+                  <span className="font-mono text-[11px] text-fg-2 shrink-0">
+                    {modelStatus
+                      ? sherpaPhaseLabel(t, modelStatus.phase)
+                      : t("asrSettings.sherpa.manage.notInstalled")}
+                  </span>
+                </div>
+                {modelStatus && !isSherpaInstalled ? (
+                  <p className="font-mono text-[11px] text-fg-3 mt-1.5">{sherpaProgressText}</p>
+                ) : null}
+                <div className="flex flex-wrap gap-2 mt-2.5">
+                  {isSherpaInstalled ? (
+                    <Button onClick={handleOpenModelFolder}>
+                      {t("asrSettings.sherpa.manage.openFolder")}
+                    </Button>
+                  ) : isSherpaDownloading ? (
+                    <Button onClick={handlePauseModel}>{t("asrSettings.sherpa.manage.pause")}</Button>
+                  ) : isSherpaPaused ? (
+                    <Button onClick={handleResumeModel}>{t("asrSettings.sherpa.manage.resume")}</Button>
+                  ) : (
+                    <Button onClick={handleDownloadModel}>
+                      {t("asrSettings.sherpa.manage.download")}
+                    </Button>
+                  )}
+                </div>
+              </FormField>
+            </>
+          ) : null}
+
           {isWhisper ? (
             <>
               <FormField
@@ -214,12 +375,12 @@ export function AsrSettingsSection() {
                 <SegmentedControl
                   type="single"
                   aria-label={t("asrSettings.model.label")}
-                  value={model}
+                  value={whisperModel}
                   onValueChange={(v: string) => {
-                    if (v) handleModelChange(v as WhisperModel);
+                    if (v) handleWhisperModelChange(v as WhisperModel);
                   }}
                 >
-                  {MODELS.map((m) => (
+                  {WHISPER_MODELS.map((m) => (
                     <SegmentedItem key={m} value={m}>
                       {t(`asrSettings.model.${m}`)}
                     </SegmentedItem>

@@ -35,6 +35,9 @@ export function applySubtitleUpdate(
     const lastIdx = entries.length - 1;
     const last = entries[lastIdx];
     if (last && last.id === sentenceId) {
+      if (last.final && !sentenceEnd) {
+        return entries;
+      }
       const updated: SubtitleEntry = {
         ...last,
         original: original || last.original,

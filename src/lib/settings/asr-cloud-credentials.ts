@@ -106,7 +106,7 @@ export function isTencentCloudComplete(fields: TencentCredentialFields): boolean
 
 /** Normalize stored profile into the shape expected by Rust invoke commands. */
 export function toRustAsrConfig(config: AsrProfileConfig): AsrProfileConfig {
-  if (config.kind === "whisper") {
+  if (config.kind === "sherpa" || config.kind === "whisper") {
     return config;
   }
 

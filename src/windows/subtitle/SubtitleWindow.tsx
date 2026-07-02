@@ -60,19 +60,29 @@ function startResize(direction: ResizeDirection) {
 
 function SubtitleEntryView({ entry }: { entry: SubtitleEntry }) {
   const tokens = parseTokens(entry.tokenSource);
+  const displayText = tokens.map((t) => t.text).join("") || entry.translation;
+  const singleHl = tokens.length === 1 && tokens[0]?.hl;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex w-full flex-col gap-0.5">
       {entry.original ? (
-        <p className="text-[13px] text-white/65 leading-snug">{entry.original}</p>
+        <p className="m-0 w-full text-[13px] leading-snug text-white/65 break-words">
+          {entry.original}
+        </p>
       ) : null}
-      <p className="text-[22px] font-700 leading-[1.3] text-white tracking-[-0.01em]">
-        {tokens.map((token, i) => (
-          <span key={i} className={cn(token.hl && "text-hi")}>
-            {token.text}
-          </span>
-        ))}
-      </p>
+      {displayText ? (
+        <p
+          className={cn(
+            "m-0 w-full text-[22px] font-700 leading-[1.35] text-white tracking-[-0.01em] break-words",
+            !entry.final && "text-white/75",
+            singleHl && "text-hi",
+          )}
+        >
+          {displayText}
+        </p>
+      ) : entry.original && !entry.final ? (
+        <p className="m-0 text-[13px] text-white/40 italic">…</p>
+      ) : null}
     </div>
   );
 }
@@ -124,10 +134,10 @@ export function SubtitleWindow() {
   };
 
   return (
-    <div className="relative h-full w-full p-2 box-border">
+    <div className="relative h-full w-full box-border">
       <div
         className={cn(
-          "relative flex h-full w-full flex-col overflow-hidden rounded",
+          "relative flex h-full w-full flex-col overflow-hidden rounded-md",
           "border border-solid border-white/16 bg-black/55 backdrop-blur-[14px]",
           "shadow-[0_12px_40px_rgba(0,0,0,0.45)]",
         )}
@@ -143,7 +153,7 @@ export function SubtitleWindow() {
 
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto px-4 py-3 pr-10 flex flex-col justify-end gap-3"
+          className="min-h-0 flex-1 w-full overflow-y-auto overflow-x-hidden px-6 py-4 pr-12 flex flex-col justify-end gap-4"
         >
           {entries.length === 0 ? (
             <p className="text-[13px] text-white/50 text-center">{t("subtitle.waiting")}</p>
