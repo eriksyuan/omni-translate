@@ -1,6 +1,8 @@
 # Logs
 logs
 *.log
+log.txt
+src-tauri/log.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -21,6 +23,9 @@ coverage
 *.tsbuildinfo
 *.local
 .pnpm-store/
+
+# Local dev caches (e.g. Sherpa model/sidecar spikes)
+.cache/
 
 # Rust
 src-tauri/target
