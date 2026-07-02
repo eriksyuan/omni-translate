@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   getMtProfile,
   markMtVerified,
+  mtBuiltinProfileId,
   mtLlmProfileId,
   mtTraditionalProfileId,
   revokeMtVerified,
@@ -33,11 +34,13 @@ export function MtSettingsSection() {
   const [mtApiKey, setMtApiKey] = useState("");
   const [llmApiKey, setLlmApiKey] = useState("");
   const [traditionalTest, setTraditionalTest] = useState<TestState>("idle");
+  const [builtinTest, setBuiltinTest] = useState<TestState>("idle");
   const [llmTest, setLlmTest] = useState<TestState>("idle");
   const traditionalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const llmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const traditionalProfileId = mtTraditionalProfileId(mtProvider);
+  const builtinProfileId = mtBuiltinProfileId();
   const llmProfileId = mtLlmProfileId(model);
 
   useEffect(() => {
@@ -85,6 +88,10 @@ export function MtSettingsSection() {
     });
   };
 
+  const persistBuiltin = () => {
+    saveMtProfile(builtinProfileId, { kind: "builtin" });
+  };
+
   const runTraditionalTest = () => {
     setTraditionalTest("testing");
     if (traditionalTimer.current) clearTimeout(traditionalTimer.current);
@@ -107,6 +114,20 @@ export function MtSettingsSection() {
       })
       .catch(() => {
         setTraditionalTest("error");
+      });
+  };
+
+  const runBuiltinTest = () => {
+    setBuiltinTest("testing");
+    persistBuiltin();
+
+    void testMtConnection({ kind: "builtin" })
+      .then(() => {
+        markMtVerified(builtinProfileId);
+        setBuiltinTest("ok");
+      })
+      .catch(() => {
+        setBuiltinTest("error");
       });
   };
 
@@ -196,6 +217,32 @@ export function MtSettingsSection() {
               </span>
             ) : null}
             {traditionalTest === "error" ? (
+              <span className="text-[12px] mt-2 text-warn-fg">{t("mtSettings.test.fail")}</span>
+            ) : null}
+          </FormField>
+        </div>
+      </div>
+
+      <div className="mt-[22px]">
+        <div className="eyebrow mb-2.5">{t("mtSettings.group.builtin")}</div>
+        <div className="formcard">
+          <p className="text-[13px] text-fg-2 leading-[1.55]">{t("mtSettings.builtin.help")}</p>
+          <p className="text-[11px] text-fg-3 mt-1.5 leading-[1.5]">{t("mtSettings.builtin.note")}</p>
+          <FormField
+            label={t("mtSettings.test.label")}
+            description={t("mtSettings.test.help")}
+            controlClassName="flex gap-2.5 items-center mt-3"
+          >
+            <Button onClick={runBuiltinTest} disabled={builtinTest === "testing"}>
+              {builtinTest === "testing" ? t("mtSettings.test.testing") : t("mtSettings.test.run")}
+            </Button>
+            {builtinTest === "ok" ? (
+              <span className="text-[12px] mt-2 inline-flex items-center gap-1.5 text-success">
+                <CheckIcon size={13} />
+                {t("mtSettings.test.ok")}
+              </span>
+            ) : null}
+            {builtinTest === "error" ? (
               <span className="text-[12px] mt-2 text-warn-fg">{t("mtSettings.test.fail")}</span>
             ) : null}
           </FormField>
@@ -296,6 +343,7 @@ export function MtSettingsSection() {
           variant="primary"
           onClick={() => {
             persistTraditional();
+            persistBuiltin();
             persistLlm();
           }}
         >

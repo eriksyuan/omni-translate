@@ -219,14 +219,15 @@
   },
   "asrSettings": {
     "title": "音频 ASR 设置",
-    "sub": "语音转文字引擎。本地 Whisper 完全离线，模型越大越准、越慢；云厂商低延迟，需联网。",
+    "sub": "本地 Sherpa 完全离线、低延迟流式识别；云厂商需联网。Whisper（旧版）需手动指定模型路径。",
     "group": {
       "engine": "识别引擎"
     },
     "engine": {
       "label": "ASR 引擎",
       "help": "读取于音频配置面板的可用列表",
-      "whisper": "本地 Whisper",
+      "sherpa": "本地 Sherpa（推荐）",
+      "whisper": "本地 Whisper（旧版）",
       "cloudAliyun": "阿里云 ASR",
       "cloudTencent": "腾讯云 ASR"
     },
@@ -241,9 +242,33 @@
       "label": "模型管理",
       "file": "whisper-base.bin · 142 MB",
       "progress": "未选择模型",
-      "ready": "已选择",
+      "ready": "已安装",
       "pathPlaceholder": "模型文件路径或占位标识",
       "choose": "自定义选择模型文件…"
+    },
+    "sherpa": {
+      "model": {
+        "help": "Small 更快 · Full 更准",
+        "small": "Small（约 122 MB）",
+        "full": "Full（约 296 MB）"
+      },
+      "manage": {
+        "pending": "首次使用时下载模型",
+        "size": "包大小 · {{size}}",
+        "notInstalled": "未安装",
+        "downloading": "下载中…",
+        "download": "下载模型",
+        "pause": "暂停",
+        "resume": "继续下载",
+        "openFolder": "打开模型文件夹",
+        "progress": "{{downloaded}} / {{total}} ({{percent}}%)"
+      },
+      "phase": {
+        "paused": "已暂停",
+        "verifying": "校验中…",
+        "extracting": "解压中…",
+        "error": "安装失败"
+      }
     },
     "apiKey": "API Key",
     "cloud": {
@@ -274,6 +299,7 @@
     "sub": "传统机器翻译延迟低、适合短句；大模型翻译更懂语境，支持 OpenAI 兼容协议自定义代理。",
     "group": {
       "mt": "传统机器翻译（MT）",
+      "builtin": "内置翻译",
       "llm": "大模型翻译（LLM · OpenAI 兼容）"
     },
     "mt": {
@@ -290,6 +316,10 @@
       "promptHint": "预设可编辑，{{text}} 处会替换为识别到的原文",
       "promptDefault": "你是一个专业的同声传译专家。请将输入的原文精准、自然地翻译为简体中文，只输出译文，不要解释。"
     },
+    "builtin": {
+      "help": "无需 API Key，使用 DeepL 网页翻译接口，适合英文识别结果翻译为中文。",
+      "note": "需联网，翻译质量与可用性受 DeepL 服务影响。"
+    },
     "test": {
       "label": "连接测试",
       "help": "测试通过后才会出现在音频监听页的引擎列表中",
@@ -301,6 +331,8 @@
   },
   "provider": {
     "asr": {
+      "sherpaSmall": "本地 Sherpa · Small",
+      "sherpaFull": "本地 Sherpa · Full",
       "whisperTiny": "本地 Whisper · Tiny",
       "whisperBase": "本地 Whisper · Base",
       "whisperLarge": "本地 Whisper · Large",
@@ -310,6 +342,7 @@
     "mt": {
       "google": "Google Translate",
       "deepl": "DeepL",
+      "builtin": "内置翻译",
       "llm": "大模型翻译",
       "llmNamed": "大模型 · {{model}}"
     },

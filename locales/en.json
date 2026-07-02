@@ -219,14 +219,15 @@
   },
   "asrSettings": {
     "title": "Audio ASR Settings",
-    "sub": "Speech-to-text engine. Local Whisper is fully offline — larger models are more accurate but slower; cloud providers offer low latency but need a connection.",
+    "sub": "Local Sherpa runs fully offline with low-latency streaming; cloud providers need a connection. Whisper (legacy) requires a manual model path.",
     "group": {
       "engine": "Recognition Engine"
     },
     "engine": {
       "label": "ASR Engine",
       "help": "Read from the available list in the audio config panel",
-      "whisper": "Local Whisper",
+      "sherpa": "Local Sherpa (recommended)",
+      "whisper": "Local Whisper (legacy)",
       "cloudAliyun": "Aliyun ASR",
       "cloudTencent": "Tencent Cloud ASR"
     },
@@ -241,9 +242,33 @@
       "label": "Model Management",
       "file": "whisper-base.bin · 142 MB",
       "progress": "No model selected",
-      "ready": "Selected",
+      "ready": "Installed",
       "pathPlaceholder": "Model file path or placeholder identifier",
       "choose": "Choose a custom model file…"
+    },
+    "sherpa": {
+      "model": {
+        "help": "Small is faster · Full is more accurate",
+        "small": "Small (~122 MB)",
+        "full": "Full (~296 MB)"
+      },
+      "manage": {
+        "pending": "Model downloads on first use",
+        "size": "Package size · {{size}}",
+        "notInstalled": "Not installed",
+        "downloading": "Downloading…",
+        "download": "Download model",
+        "pause": "Pause",
+        "resume": "Resume download",
+        "openFolder": "Open model folder",
+        "progress": "{{downloaded}} / {{total}} ({{percent}}%)"
+      },
+      "phase": {
+        "paused": "Paused",
+        "verifying": "Verifying…",
+        "extracting": "Extracting…",
+        "error": "Install failed"
+      }
     },
     "apiKey": "API Key",
     "cloud": {
@@ -274,6 +299,7 @@
     "sub": "Traditional machine translation has low latency for short text; LLM translation understands context better and supports OpenAI-compatible custom proxies.",
     "group": {
       "mt": "Machine Translation (MT)",
+      "builtin": "Built-in Translation",
       "llm": "LLM Translation (OpenAI compatible)"
     },
     "mt": {
@@ -290,6 +316,10 @@
       "promptHint": "The preset is editable; {{text}} will be replaced with the recognized source text",
       "promptDefault": "You are a professional simultaneous interpreter. Translate the input text accurately and naturally into English. Output only the translation, no explanations."
     },
+    "builtin": {
+      "help": "No API key required. Uses the DeepL web translate API for English-to-Chinese translation.",
+      "note": "Requires internet access. Quality and availability depend on DeepL's service."
+    },
     "test": {
       "label": "Connection Test",
       "help": "Only appears in the audio panel after a successful test",
@@ -301,6 +331,8 @@
   },
   "provider": {
     "asr": {
+      "sherpaSmall": "Local Sherpa · Small",
+      "sherpaFull": "Local Sherpa · Full",
       "whisperTiny": "Local Whisper · Tiny",
       "whisperBase": "Local Whisper · Base",
       "whisperLarge": "Local Whisper · Large",
@@ -310,6 +342,7 @@
     "mt": {
       "google": "Google Translate",
       "deepl": "DeepL",
+      "builtin": "Built-in Translation",
       "llm": "LLM Translation",
       "llmNamed": "LLM · {{model}}"
     },

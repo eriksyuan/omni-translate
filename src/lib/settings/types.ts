@@ -1,5 +1,6 @@
-export type AsrEngine = "whisper" | "cloudAliyun" | "cloudTencent";
+export type AsrEngine = "sherpa" | "whisper" | "cloudAliyun" | "cloudTencent";
 export type WhisperModel = "tiny" | "base" | "large";
+export type SherpaModel = "zipformer-en-20m" | "zipformer-en-full";
 export type MtTraditionalProvider = "google" | "deepl";
 export type AudioTranslationMode = "modular" | "integrated";
 export type TencentTransModel = "hunyuan-translation-lite" | "hunyuan-translation";
@@ -14,19 +15,29 @@ import type {
 export type { TencentLanguagePair, TencentSpeechSource, TencentSpeechTarget };
 
 export type AsrProfileId =
+  | "asr:sherpa:zipformer-en-20m"
+  | "asr:sherpa:zipformer-en-full"
   | "asr:whisper:tiny"
   | "asr:whisper:base"
   | "asr:whisper:large"
   | "asr:cloud:aliyun"
   | "asr:cloud:tencent";
 
-export type MtProfileId = `mt:traditional:${MtTraditionalProvider}` | `mt:llm:${string}`;
+export type MtProfileId =
+  | `mt:traditional:${MtTraditionalProvider}`
+  | `mt:llm:${string}`
+  | "mt:builtin";
 
 export type SpeechTranslateProfileId = "speech:tencent:realtime";
 
 export type ProviderProfileId = AsrProfileId | MtProfileId | SpeechTranslateProfileId;
 export type ProviderKind = "asr" | "mt" | "speechTranslate";
 export type PreferencesSection = "general" | "ocr" | "asr" | "mt" | "speechTranslate";
+
+export interface AsrSherpaProfileConfig {
+  kind: "sherpa";
+  model: SherpaModel;
+}
 
 export interface AsrWhisperProfileConfig {
   kind: "whisper";
@@ -48,7 +59,10 @@ export interface AsrCloudProfileConfig {
   secretKey?: string;
 }
 
-export type AsrProfileConfig = AsrWhisperProfileConfig | AsrCloudProfileConfig;
+export type AsrProfileConfig =
+  | AsrSherpaProfileConfig
+  | AsrWhisperProfileConfig
+  | AsrCloudProfileConfig;
 
 export interface MtTraditionalProfileConfig {
   kind: "traditional";
@@ -64,7 +78,11 @@ export interface MtLlmProfileConfig {
   prompt: string;
 }
 
-export type MtProfileConfig = MtTraditionalProfileConfig | MtLlmProfileConfig;
+export interface MtBuiltinProfileConfig {
+  kind: "builtin";
+}
+
+export type MtProfileConfig = MtTraditionalProfileConfig | MtLlmProfileConfig | MtBuiltinProfileConfig;
 
 /** Service profile: credentials + engine tuning (no language pair). */
 export interface TencentSpeechTranslateConfig {

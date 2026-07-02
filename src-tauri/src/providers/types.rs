@@ -13,6 +13,9 @@ pub enum AsrConfig {
         #[serde(rename = "modelPath")]
         model_path: String,
     },
+    Sherpa {
+        model: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
@@ -38,6 +41,7 @@ pub enum MtConfig {
         model: String,
         prompt: String,
     },
+    Builtin,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]

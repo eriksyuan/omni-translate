@@ -2,6 +2,7 @@ use crate::providers::types::CloudAsrEngine;
 use thiserror::Error;
 
 pub mod aliyun;
+pub mod sherpa;
 pub mod tencent;
 #[cfg(feature = "whisper")]
 pub mod whisper;
@@ -41,6 +42,9 @@ pub fn build_asr(config: &crate::providers::types::AsrConfig) -> Result<Box<dyn 
                 ))
             }
         }
+        crate::providers::types::AsrConfig::Sherpa { .. } => Err(AsrError::Request(
+            "Sherpa ASR requires a streaming session; use SherpaSidecarSession instead of build_asr".into(),
+        )),
     }
 }
 
